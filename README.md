@@ -1,6 +1,6 @@
 # dashboard_apparentati
 
-Dashboard di casa (presenze a cena, turni pulizia) mostrata su una TV LG webOS e alimentata da un'app Android. Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [PRD.md](PRD.md), [PRP.md](PRP.md).
+Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV LG webOS e alimentata da un'app Android. Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [PRD.md](PRD.md), [PRP.md](PRP.md).
 
 ## Struttura
 
@@ -16,15 +16,19 @@ Dashboard di casa (presenze a cena, turni pulizia) mostrata su una TV LG webOS e
 2. **Esegui le migrazioni dal SQL Editor** del progetto, in quest'ordine, incollando ed eseguendo il contenuto di ciascun file:
    1. `supabase/migrations/20260915000000_initial_schema.sql`
    2. `supabase/migrations/20260915000001_rls_policies.sql`
+   3. `supabase/migrations/20260916000000_active_flags.sql`
+   4. `supabase/migrations/20260916000001_meal_presence.sql`
 
-3. **Popola a mano `roommates` e `cleaning_tasks`**, dal Table Editor oppure dal SQL Editor (che gira con un ruolo privilegiato, quindi non è bloccato dalla RLS). Esempio con nomi segnaposto da sostituire:
+3. **Popola a mano `roommates` e `cleaning_tasks`**, dal Table Editor oppure dal SQL Editor (che gira con un ruolo privilegiato, quindi non è bloccato dalla RLS). Esempio, con i nomi dei coinquilini da sostituire:
 
    ```sql
    insert into roommates (name) values ('Nome 1'), ('Nome 2');
-   insert into cleaning_tasks (name, sort_order) values ('Cucina', 1), ('Bagno', 2);
+   insert into cleaning_tasks (name, sort_order) values
+     ('Sala', 1), ('Camera 1', 2), ('Camera 2', 3), ('Bagno 1', 4),
+     ('Bagno 2', 5), ('Cucina', 6), ('Pavimenti e polveri mensole', 7);
    ```
 
-   `dinner_presence` e `cleaning_shifts` restano vuote.
+   `meal_presence` e `cleaning_shifts` restano vuote: le riempie l'app. Chi lascia la casa non si cancella, si imposta `active = false`.
 
 4. **Copia URL e publishable key nel tuo `.env` locale:**
 

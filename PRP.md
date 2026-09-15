@@ -1,8 +1,8 @@
 # PRP — Dashboard Appartamento (`flat-dashboard`)
 
-Versione: 0.1 (bozza iniziale, da rivedere prima di dare il via alla build)
+Versione: 0.2 (pasti con ospiti e orari, turni flessibili, publishable key)
 Riferimento: PRD.md nello stesso progetto
-Data: 2026-09-14
+Data: 2026-09-14, aggiornato 2026-09-16
 
 Questo documento descrive **come** costruire quanto definito nel PRD: architettura, stack, data model, fasi di lavoro, criteri di accettazione e rischi noti. È pensato per essere dato in pasto a Claude Code come contesto di partenza per l'implementazione, non come specifica immutabile: ogni fase termina con un checkpoint in cui va verificato con l'uso reale prima di passare alla successiva.
 
@@ -35,28 +35,36 @@ Punti chiave della scelta architetturale (dettagli e alternative scartate nella 
 
 ## 3. Data model (Supabase / Postgres)
 
-Schema minimo per l'MVP. Nomi tabelle e campi in inglese per coerenza con il resto del codice.
+Schema minimo per l'MVP. Nomi tabelle e campi in inglese per coerenza con il resto del codice. La fonte di verità sono i file in `supabase/migrations/`, da eseguire in ordine; il blocco qui sotto è lo schema che ne risulta.
 
 ```sql
 create table roommates (
   id uuid primary key default gen_random_uuid(),
   name text not null unique,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  active boolean not null default true
 );
 
-create table dinner_presence (
+create table meal_presence (
   id uuid primary key default gen_random_uuid(),
   roommate_id uuid not null references roommates(id),
   date date not null,
+  meal text not null check (meal in ('lunch', 'dinner')),
   is_present boolean not null,
+  required_time time,
+  guest_names text[] not null default '{}',
+  note text,
   updated_at timestamptz not null default now(),
-  unique (roommate_id, date)
+  unique (roommate_id, date, meal),
+  constraint absent_has_no_guests_or_time
+    check (is_present or (cardinality(guest_names) = 0 and required_time is null))
 );
 
 create table cleaning_tasks (
   id uuid primary key default gen_random_uuid(),
   name text not null,
-  sort_order int not null default 0
+  sort_order int not null default 0,
+  active boolean not null default true
 );
 
 create table cleaning_shifts (
@@ -71,9 +79,12 @@ create table cleaning_shifts (
 ```
 
 Note:
-- `roommates` è popolata a mano da Pietro (nessuna UI di registrazione nell'MVP — coerente con l'identificazione "seleziona il tuo nome" del PRD).
-- La rotazione dei turni (chi tocca quale task ogni settimana) può partire come generata via script una tantum (o ricalcolata a runtime lato app da un ordine fisso + data di riferimento) piuttosto che gestita a mano riga per riga — da decidere in fase di implementazione, non blocca l'MVP.
-- Row Level Security: anche se i dati non sono sensibili, va comunque abilitata una policy base (es. richiede la anon key, niente scrittura libera da internet senza nemmeno quella) per evitare che il progetto Supabase sia scrivibile da chiunque trovi l'URL.
+- `roommates` è popolata a mano da Pietro (nessuna UI di registrazione nell'MVP — coerente con l'identificazione "seleziona il tuo nome" del PRD). Chi lascia la casa si disattiva con `active = false` invece di essere cancellato: le chiavi esterne impediscono di cancellare righe con presenze o turni collegati. Stessa regola per `cleaning_tasks`.
+- `cleaning_tasks` contiene le 7 aree del PRD (sala, camera 1, camera 2, bagno 1, bagno 2, cucina, pavimenti e polveri delle mensole), popolate a mano.
+- Turni: nessuna rotazione automatica. Le righe di `cleaning_shifts` le crea e modifica l'app, da parte di qualsiasi coinquilino, settimana per settimana; un cambio all'ultimo è un update di `roommate_id` sulla riga esistente. Un solo responsabile per area per settimana (`unique (task_id, week_start)`).
+- Pasti: una riga per coinquilino, giorno e pasto (`lunch`/`dinner`); nessuna riga significa "non specificato". `guest_names` è la lista dei nomi degli ospiti e il numero di ospiti è `cardinality(guest_names)`; gli ospiti mangiano al `required_time` di chi li invita, le eccezioni vanno in `note`. Il vincolo `absent_has_no_guests_or_time` impedisce ospiti e orario richiesto quando `is_present` è falso; la nota è ammessa anche da assenti.
+- Row Level Security: abilitata su tutte le tabelle. Le app usano la **publishable key** (`sb_publishable_...`), che sostituisce la anon key legacy in dismissione entro fine 2026. È pubblica per design (finisce nell'APK e nell'app TV), quindi da sola non protegge nulla: la protezione sono le policy RLS, che danno al ruolo `anon` lettura su tutto e scrittura (insert/update, mai delete) solo sulle tabelle che l'app aggiorna (`meal_presence`, `cleaning_shifts`). `roommates` e `cleaning_tasks` si modificano solo dalla dashboard Supabase. La *secret key* non va mai in nessuna app né nel repo.
+- Realtime: TV e app devono vedere gli aggiornamenti senza refresh manuale. Se aggiungere `meal_presence` e `cleaning_shifts` alla publication `supabase_realtime` o usare il polling si decide in Fase 1.
 
 ## 4. Fasi di implementazione
 
@@ -84,7 +95,7 @@ Creare progetto, schema sopra, RLS di base, popolare `roommates` e `cleaning_tas
 *Checkpoint:* riuscire a leggere/scrivere righe di test dalla dashboard web di Supabase.
 
 **Fase 1 — App TV minima**
-Pagina HTML/JS che legge `dinner_presence` e `cleaning_shifts` di oggi/questa settimana da Supabase e li mostra. Nessuna grafica curata ancora, solo dati veri a schermo.
+Pagina HTML/JS che legge da Supabase `meal_presence` (pranzo e cena di oggi, con ospiti e orari richiesti) e `cleaning_shifts` della settimana corrente, e li mostra. Nessuna grafica curata ancora, solo dati veri a schermo.
 *Checkpoint:* sideload via Developer Mode riuscito, dati corretti mostrati, TV non va in screensaver dopo 30+ minuti di inattività reale (test lungo, non solo pochi minuti).
 
 **Fase 2 — Script di rinnovo Developer Mode**
@@ -92,8 +103,8 @@ Script Python + integrazione in Hermes-agent.
 *Checkpoint:* osservare almeno un rinnovo automatico andato a buon fine senza intervento manuale, verificare che l'app installata sopravviva.
 
 **Fase 3 — App Android MVP**
-Schermata presenza cena (oggi + prossimi giorni) e schermata turni pulizia (stato corrente, segna come fatto). Scrittura diretta su Supabase.
-*Checkpoint:* una modifica dall'app si riflette sulla TV entro pochi secondi.
+Schermata presenza ai pasti (pranzo e cena, oggi + prossimi giorni, con orario richiesto, ospiti e nota) e schermata turni pulizia (assegnazione delle aree della settimana, cambi all'ultimo, segna come fatto). Scrittura diretta su Supabase; gli aggiornamenti degli altri compaiono in tempo reale anche nell'app.
+*Checkpoint:* una modifica dall'app si riflette sulla TV e sull'app di un altro coinquilino entro pochi secondi.
 
 **Fase 4 — Distribuzione**
 Build APK firmata, repo GitHub pubblico con Release, verifica che Obtainium la riconosca e la installi.
@@ -118,7 +129,7 @@ Coinvolgere i coinquilini, raccogliere feedback sull'uso reale per una settimana
 
 ## 6. Criteri di accettazione MVP
 
-- La TV mostra presenze a cena e turno pulizie della settimana corrente, sempre, senza intervento manuale per almeno 2 settimane consecutive.
-- Un coinquilino può segnalare la propria presenza a cena dall'app in meno di 10 secondi dall'apertura.
-- Una modifica dall'app compare sulla TV senza bisogno di refresh manuale.
+- La TV mostra presenze a pranzo e cena (con ospiti e orari richiesti) e turni pulizie della settimana corrente, sempre, senza intervento manuale per almeno 2 settimane consecutive.
+- Un coinquilino può segnalare la propria presenza a un pasto dall'app in meno di 10 secondi dall'apertura.
+- Una modifica dall'app compare sulla TV e nelle app degli altri coinquilini senza bisogno di refresh manuale.
 - Il rinnovo della Developer Mode avviene senza intervento umano per almeno un ciclo completo osservato.
