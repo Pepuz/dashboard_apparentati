@@ -1,0 +1,11 @@
+{
+  "id": "com.apparentati.dashboard",
+  "version": "0.1.0",
+  "vendor": "dashboard_apparentati",
+  "type": "web",
+  "main": "index.html",
+  "title": "Dashboard casa",
+  "icon": "icon.png",
+  "resolution": "1920x1080",
+  "enablePigScreenSaver": false
+}

@@ -1,6 +1,6 @@
 # dashboard_apparentati
 
-Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV LG webOS e alimentata da un'app Android. Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [PRD.md](PRD.md), [PRP.md](PRP.md).
+Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV LG webOS e alimentata da un'app Android. Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [docs/PRD.md](docs/PRD.md), [docs/PRP.md](docs/PRP.md).
 
 ## Struttura
 
@@ -39,3 +39,100 @@ Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV L
    Compila `SUPABASE_URL` (`https://<project-ref>.supabase.co`, il ref è nell'indirizzo della dashboard dopo `/project/`) e `SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys, inizia con `sb_publishable_`). Non usare le chiavi legacy `anon`/`service_role`, in dismissione entro fine 2026, e **mai** la *secret key*: bypassa la RLS e non deve finire in nessuna app né nel repo. `.env` è già escluso da `.gitignore`.
 
 **Checkpoint Fase 0 (dal PRP):** dalla dashboard web di Supabase riesci a leggere e scrivere righe di test. Solo dopo si passa alla Fase 1.
+
+## Fase 1 — passi manuali
+
+L'app TV è in `tv-app/`: HTML e JS senza dipendenze, legge Supabase via REST ogni 20 s e non scrive mai. Riferimento ufficiale LG: [Developer Mode](https://webostv.developer.lge.com/develop/getting-started/developer-mode-app), [CLI](https://webostv.developer.lge.com/develop/tools/cli-dev-guide).
+
+### A. Prova nel browser del PC
+
+1. **Genera la config dal `.env`:**
+
+   ```powershell
+   pwsh -File tv-app/make-config.ps1
+   ```
+
+   Se va a buon fine non stampa nulla e crea `tv-app/config.js`, git-ignorato. Rifiuta chiavi che non iniziano con `sb_publishable_`.
+
+2. **Apri `tv-app/index.html`** con doppio clic (Chrome o Edge). Devi vedere: la data di oggi in alto; Pranzo e Cena con ogni coinquilino attivo (presente / assente / non specificato, orario, ospiti, nota); i turni della settimana corrente in ordine di area; in basso `Aggiornato alle HH:MM:SS` e `Screensaver: WebOSServiceBridge non disponibile (normale fuori dalla TV)`.
+
+3. **Confronta con Supabase** (Table Editor): `meal_presence` con `date` = oggi, `cleaning_shifts` con `week_start` = lunedì di questa settimana.
+
+4. **Modifica una riga** dal Table Editor senza toccare la pagina: entro circa 20 s la pagina cambia.
+
+5. **Premi Invio** (sulla TV: OK): la settimana successiva compare o sparisce.
+
+Controllo della logica di date e testi, senza rete:
+
+```powershell
+node tv-app/app.test.js
+```
+
+### B. Developer Mode sulla TV
+
+1. Crea un account sul sito [LG Developer](https://webostv.developer.lge.com): la Developer Mode richiede quello, non basta l'account LG della TV.
+2. Sulla TV premi **Home**, apri lo store (**Apps** sui modelli recenti, **LG Content Store** sui più vecchi), cerca `Developer Mode` e installala.
+3. Aprila, accedi con l'account LG Developer e attiva **Dev Mode Status**: la TV si riavvia.
+4. Riapri Developer Mode: annota l'indirizzo IP mostrato e attiva **Key Server**.
+
+Alla scadenza della sessione Developer Mode le app installate così vengono disinstallate (doc LG). Solo da fonte community ([webosbrew](https://www.webosbrew.org/devmode/)): un account LG Developer resta collegato a una sola TV alla volta, e il Key Server si spegne quando la TV si riavvia.
+
+### C. ares-cli sul PC
+
+1. Controlla Node: `@webos-tools/cli` 3.2.6 richiede Node 20 o successivo (campo `engines` del pacchetto npm; la pagina di installazione LG indica ancora 14.15.1–16.20.2, superata).
+
+   ```powershell
+   node --version
+   ```
+
+2. Installa e verifica il CLI:
+
+   ```powershell
+   npm install -g @webos-tools/cli
+   ares -V
+   ```
+
+3. Registra la TV (sostituisci l'IP con quello annotato al passo B4):
+
+   ```powershell
+   ares-setup-device --add tv -i "host=192.168.1.50" -i "port=9922" -i "username=prisoner"
+   ```
+
+4. Scarica la chiave: il comando chiede la passphrase di 6 caratteri mostrata sulla TV (maiuscole e minuscole contano).
+
+   ```powershell
+   ares-novacom --device tv --getkey
+   ```
+
+5. Verifica la connessione e leggi modello e firmware:
+
+   ```powershell
+   ares-device --device tv --system-info
+   ```
+
+### D. Pacchetto, installazione, avvio
+
+Dalla root del repo. Il file `.ipk` viene creato nella root ed è git-ignorato; contiene la publishable key, che è pubblica per design.
+
+```powershell
+pwsh -File tv-app/make-config.ps1
+ares-package tv-app -e "app.test.js" -e "make-config.ps1" -e "config.example.js"
+ares-install --device tv com.apparentati.dashboard_0.1.0_all.ipk
+ares-launch --device tv com.apparentati.dashboard
+```
+
+Poi, senza toccare la TV: i dati devono essere gli stessi del browser, e una riga modificata dalla dashboard Supabase (Table Editor o SQL Editor) deve comparire entro 30 s.
+
+Se la pagina resta vuota, `ares-inspect --device tv --app com.apparentati.dashboard` apre i DevTools (serve un Chromium compatibile con la versione webOS della TV).
+
+### E. Osservazione screensaver (facoltativa)
+
+L'app TV è un'app normale, aperta quando serve: lo screensaver non blocca la Fase 1, si osserva e basta.
+
+1. La data in alto nella dashboard è quella giusta (se no, correggi il fuso orario della TV).
+2. Apri la dashboard, annota l'ora di inizio e il testo esatto della riga `Screensaver:` in basso.
+3. Lasciala aperta senza toccare telecomando, app ThinQ o sorgenti HDMI, per quanto ti è comodo: un utente del forum LG lo vedeva comparire dopo circa 45 minuti.
+4. Annota: se e dopo quanti minuti compare lo screensaver (o lo schermo diventa nero), il testo della riga `Screensaver:` e l'orario di `Aggiornato alle`.
+5. Se nell'uso reale lo screensaver dà fastidio, c'è il piano del video in loop (PRP §5), pronto ma non implementato.
+
+**Checkpoint Fase 1 (dal PRP):** dati corretti nel browser e sulla TV, una modifica da Supabase compare sulla TV entro 30 s senza toccarla. L'osservazione dello screensaver è facoltativa.

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard casa</title>
+  <style>
+    body { margin: 0; padding: 40px 60px; background: #111; color: #eee; font: 26px/1.4 sans-serif; overflow: hidden; }
+    h1 { margin: 0 0 10px; font-size: 40px; }
+    h2 { margin: 24px 0 8px; font-size: 32px; }
+    ul { margin: 0; padding-left: 32px; }
+    main { display: flex; }
+    main > section { flex: 1; padding-right: 40px; }
+    footer { position: fixed; left: 60px; bottom: 20px; font-size: 18px; color: #999; }
+    .error { color: #ff6b6b; }
+  </style>
+</head>
+<body>
+  <h1 id="today"></h1>
+  <main>
+    <section id="meals"></section>
+    <section id="shifts"></section>
+  </main>
+  <footer>
+    <div id="sync"></div>
+    <div id="screensaver"></div>
+  </footer>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -26,6 +26,7 @@ build/
 node_modules/
 npm-debug.log*
 *.ipk
+tv-app/config.js
 
 # Python
 __pycache__/

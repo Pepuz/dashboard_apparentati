@@ -1,8 +1,8 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.2 (pasti con ospiti e orari, turni flessibili)
+Versione: 0.3 (vista TV aperta quando serve, settimana successiva dal sabato)
 Autore: Pietro (con supporto Claude)
-Data: 2026-09-14, aggiornato 2026-09-16
+Data: 2026-09-14, aggiornato 2026-09-15
 
 ## 1. Problema
 
@@ -10,7 +10,7 @@ In casa servono coordinamento su tre cose che oggi probabilmente passano per mes
 
 ## 2. Obiettivo
 
-Una dashboard sempre accesa sulla smart TV LG del soggiorno che mostra lo stato condiviso di casa in tempo reale, alimentata da un'app Android che i coinquilini usano per aggiornare presenze e turni. Nessuna interazione richiesta sulla TV: è a sola lettura, pensata per essere vista al volo passando in salotto.
+Una dashboard sulla smart TV LG del soggiorno, aperta come app quando serve, che mostra lo stato condiviso di casa e si aggiorna da sola, alimentata da un'app Android che i coinquilini usano per aggiornare presenze e turni. Sulla TV è a sola lettura: una volta aperta non richiede interazione, pensata per essere vista al volo passando in salotto.
 
 ## 3. Utenti
 
@@ -34,16 +34,18 @@ Una dashboard sempre accesa sulla smart TV LG del soggiorno che mostra lo stato 
 - Cadenza settimanale, nessuna rotazione automatica: chi fa cosa si imposta settimana per settimana.
 - Qualsiasi coinquilino, dall'app, assegna le aree della settimana e può cambiarle anche all'ultimo (riassegnare un'area a un altro coinquilino, senza conferma).
 - Ogni area ha un solo responsabile per settimana.
-- La TV mostra le assegnazioni della settimana corrente con il loro stato e, se già impostate, quelle della settimana successiva.
+- La TV mostra le assegnazioni della settimana corrente con il loro stato. La settimana successiva compare da sola il sabato e la domenica, se ha già almeno un'assegnazione; in qualsiasi giorno il tasto OK del telecomando la mostra o la nasconde, anche se è vuota.
 - Dall'app si segna un'area come completata.
 
 ### 4.3 "E altro"
 Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP questo resta fuori scope esplicito — vedi §5 — ma il data model (PRP §3) è pensato per essere esteso senza ristrutturare tutto. **[DA DEFINIRE]** cosa vuoi aggiungere dopo l'MVP: lista spesa condivisa? bollette? avvisi/bacheca? calendario eventi di casa?
 
 ### 4.4 Vista TV
-- Sempre accesa, fullscreen, nessuno screensaver che la copre, nessuna interazione richiesta.
-- Si aggiorna da sola quando qualcuno modifica qualcosa dall'app (realtime o refresh a breve intervallo, vedi PRP).
-- Sopravvive a riavvii della TV e non richiede intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
+- La TV si usa normalmente e di notte si spegne: la dashboard è un'app che si apre quando serve, non un contenuto sempre acceso.
+- Una volta aperta: fullscreen, nessuna interazione richiesta (unica eccezione facoltativa: il tasto OK per la settimana successiva, §4.2).
+- È un'app normale: se resta aperta a lungo senza input può comparire lo screensaver della TV. Si interviene solo se nell'uso reale dà fastidio (PRP §5).
+- Si aggiorna da sola quando qualcuno modifica qualcosa dall'app (refresh a breve intervallo, vedi PRP).
+- Resta installata tra un'accensione e l'altra senza intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
 
 ### 4.5 App Android
 - Distribuita fuori Play Store, via Obtainium, gratuitamente.
@@ -59,6 +61,7 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - Personalizzazione avanzata della UI sulla TV (temi, layout configurabile).
 - Rotazione automatica dei turni di pulizia: le assegnazioni si impostano a mano, settimana per settimana.
 - Scambi turno con conferma dall'altro coinquilino: per l'MVP chiunque può riassegnare un'area dall'app, senza conferma.
+- Avvio automatico della dashboard all'accensione della TV: si apre a mano quando serve.
 
 ## 6. Vincoli
 
@@ -70,7 +73,7 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 
 Progetto personale, quindi metriche informali:
 - I coinquilini lo usano davvero al posto dei messaggi in chat per queste cose specifiche.
-- La TV mostra dati corretti e aggiornati senza bisogno di riavvii manuali per più di qualche settimana di fila.
+- L'app TV, quando la si apre, mostra dati corretti e aggiornati, senza reinstallazioni o interventi manuali per più di qualche settimana di fila.
 - Aggiungere un coinquilino nuovo o un'area di pulizia richiede una modifica minima (dato in Supabase), non codice; chi lascia la casa si disattiva, non si cancella.
 
 ## 8. Domande aperte prima di iniziare l'implementazione
