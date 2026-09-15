@@ -26,12 +26,12 @@ Dashboard di casa (presenze a cena, turni pulizia) mostrata su una TV LG webOS e
 
    `dinner_presence` e `cleaning_shifts` restano vuote.
 
-4. **Copia URL e anon key nel tuo `.env` locale:**
+4. **Copia URL e publishable key nel tuo `.env` locale:**
 
    ```powershell
    Copy-Item .env.example .env
    ```
 
-   Compila `SUPABASE_URL` e `SUPABASE_ANON_KEY` con i valori presi dalle impostazioni API del progetto. Usa la chiave **anon** (nei progetti recenti può comparire come *publishable key*), **mai** la `service_role` / *secret key*: bypassa la RLS e non deve finire in nessuna app né nel repo. `.env` è già escluso da `.gitignore`.
+   Compila `SUPABASE_URL` (`https://<project-ref>.supabase.co`, il ref è nell'indirizzo della dashboard dopo `/project/`) e `SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys, inizia con `sb_publishable_`). Non usare le chiavi legacy `anon`/`service_role`, in dismissione entro fine 2026, e **mai** la *secret key*: bypassa la RLS e non deve finire in nessuna app né nel repo. `.env` è già escluso da `.gitignore`.
 
 **Checkpoint Fase 0 (dal PRP):** dalla dashboard web di Supabase riesci a leggere e scrivere righe di test. Solo dopo si passa alla Fase 1.
