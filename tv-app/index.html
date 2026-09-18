@@ -23,8 +23,31 @@
   <footer>
     <div id="sync"></div>
     <div id="screensaver"></div>
+    <div id="source"></div>
   </footer>
   <script src="config.js"></script>
-  <script src="app.js"></script>
+  <script>
+    // app.js comes from GitHub Pages so code updates need no new sideload; the packaged copy is the fallback.
+    (function () {
+      var REMOTE_APP_URL = 'https://pepuz.github.io/dashboard_apparentati/tv-app/app.js';
+
+      function load(src, label, onError) {
+        var script = document.createElement('script');
+        script.src = src;
+        script.onload = function () {
+          document.getElementById('source').textContent = 'Codice: ' + label;
+        };
+        script.onerror = onError;
+        document.body.appendChild(script);
+      }
+
+      // No timeout on the remote request: a hanging connection delays startup until the engine gives up.
+      load(REMOTE_APP_URL + '?t=' + Date.now(), 'remoto', function () {
+        load('app.js', 'copia locale', function () {
+          document.getElementById('source').textContent = 'Codice: app.js non trovato';
+        });
+      });
+    })();
+  </script>
 </body>
 </html>

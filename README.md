@@ -54,7 +54,7 @@ L'app TV è in `tv-app/`: HTML e JS senza dipendenze, legge Supabase via REST og
 
    Se va a buon fine non stampa nulla e crea `tv-app/config.js`, git-ignorato. Rifiuta chiavi che non iniziano con `sb_publishable_`.
 
-2. **Apri `tv-app/index.html`** con doppio clic (Chrome o Edge). Devi vedere: la data di oggi in alto; Pranzo e Cena con ogni coinquilino attivo (presente / assente / non specificato, orario, ospiti, nota); i turni della settimana corrente in ordine di area; in basso `Aggiornato alle HH:MM:SS` e `Screensaver: WebOSServiceBridge non disponibile (normale fuori dalla TV)`.
+2. **Apri `tv-app/index.html`** con doppio clic (Chrome o Edge). Devi vedere: la data di oggi in alto; Pranzo e Cena con ogni coinquilino attivo (presente / assente / non specificato, orario, ospiti, nota); i turni della settimana corrente in ordine di area; in basso `Aggiornato alle HH:MM:SS`, `Screensaver: WebOSServiceBridge non disponibile (normale fuori dalla TV)` e `Codice: remoto` (oppure `Codice: copia locale` finché GitHub Pages non è attivo, sezione G).
 
 3. **Confronta con Supabase** (Table Editor): `meal_presence` con `date` = oggi, `cleaning_shifts` con `week_start` = lunedì di questa settimana.
 
@@ -117,7 +117,7 @@ Dalla root del repo. Il file `.ipk` viene creato nella root ed è git-ignorato; 
 ```powershell
 pwsh -File tv-app/make-config.ps1
 ares-package tv-app -e "app.test.js" -e "make-config.ps1" -e "config.example.js"
-ares-install --device tv com.apparentati.dashboard_0.1.0_all.ipk
+ares-install --device tv com.apparentati.dashboard_0.2.0_all.ipk
 ares-launch --device tv com.apparentati.dashboard
 ```
 
@@ -135,4 +135,44 @@ L'app TV è un'app normale, aperta quando serve: lo screensaver non blocca la Fa
 4. Annota: se e dopo quanti minuti compare lo screensaver (o lo schermo diventa nero), il testo della riga `Screensaver:` e l'orario di `Aggiornato alle`.
 5. Se nell'uso reale lo screensaver dà fastidio, c'è il piano del video in loop (PRP §5), pronto ma non implementato.
 
+### F. Sideload da un PC diverso da quello di sviluppo
+
+`ares-cli` si collega alla TV sulla porta 9922 del suo indirizzo IP, quindi serve un computer sulla stessa rete della TV. Se non è il PC dove sviluppi, la procedura completa e autosufficiente sta in [docs/sideload-tv.md](docs/sideload-tv.md): basta portare quel file e il `.ipk`, senza repo.
+
+### G. Aggiornare l'app senza sideload (GitHub Pages)
+
+L'app installata è un guscio: all'avvio carica `tv-app/app.js` da `https://pepuz.github.io/dashboard_apparentati/tv-app/app.js` e, se non ci riesce, usa la copia inclusa nel pacchetto. La riga `Codice:` in basso dice quale sta usando. GitHub Pages è gratuito per i repo pubblici con GitHub Free ([doc GitHub](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)); il repo pubblicato non contiene chiavi, perché `tv-app/config.js` è git-ignorato e resta solo nel pacchetto.
+
+Una volta sola:
+
+1. Su github.com, in alto a destra, **+** → **New repository**. Owner: il tuo account; nome `dashboard_apparentati`; visibilità **Public**; nessun README, `.gitignore` o licenza, perché il repo esiste già in locale. Poi **Create repository**.
+
+2. Collega il repo locale e pubblicalo:
+
+   ```powershell
+   git remote add origin https://github.com/Pepuz/dashboard_apparentati.git
+   ```
+
+   ```powershell
+   git push -u origin master
+   ```
+
+3. Nel repo su GitHub: **Settings** → nella barra laterale, sezione **Code, planning, and automation**, **Pages** → sotto **Build and deployment**, in **Source** scegli **Deploy from a branch** → nel menu del branch scegli `master` e in quello della cartella la radice del repo → **Save**.
+
+4. Quando la pubblicazione è finita (la doc non dice quanto ci vuole), l'indirizzo `https://pepuz.github.io/dashboard_apparentati/tv-app/app.js` aperto nel browser mostra il codice.
+
+5. Un ultimo sideload del pacchetto 0.2.0 (sezione D, o F da un altro PC). Sulla TV la riga in basso deve dire `Codice: remoto`.
+
+A ogni aggiornamento successivo:
+
+1. Modifica `tv-app/app.js`, esegui `node tv-app/app.test.js` e prova nel browser (sezione A).
+2. Commit e push su `master`.
+3. Sulla TV chiudi e riapri l'app.
+
+Un nuovo sideload serve ancora per modifiche a `index.html`, `appinfo.json` o `config.js` (URL o chiave), o per cambiare l'indirizzo da cui si carica il codice.
+
 **Checkpoint Fase 1 (dal PRP):** dati corretti nel browser e sulla TV, una modifica da Supabase compare sulla TV entro 30 s senza toccarla. L'osservazione dello screensaver è facoltativa.
+
+## Licenza
+
+MIT, vedi [LICENSE](LICENSE).

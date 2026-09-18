@@ -1,6 +1,6 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.3 (vista TV aperta quando serve, settimana successiva dal sabato)
+Versione: 0.5 (app TV come guscio aggiornabile da remoto)
 Autore: Pietro (con supporto Claude)
 Data: 2026-09-14, aggiornato 2026-09-15
 
@@ -17,7 +17,9 @@ Una dashboard sulla smart TV LG del soggiorno, aperta come app quando serve, che
 - Pietro (admin/manutentore del sistema)
 - Coinquilini (utenti finali dell'app Android)
 
-**[DA DEFINIRE]** Quanti coinquilini in totale, e se tutti hanno un telefono Android (Obtainium è Android-only: chi ha iPhone resta escluso dall'app e dovrebbe passare da un canale alternativo, es. messaggio a un familiare/coinquilino che aggiorna per lui — da chiarire se è un caso reale in casa vostra).
+Coinquilini attivi: 7. I nomi stanno solo in Supabase, non nel repo.
+
+Non tutti hanno Android: chi ha iPhone non può installare l'app, perché Obtainium è Android-only. **[DA DEFINIRE]** quanti sono e come aggiornano presenze e turni. Opzioni: (a) un coinquilino con Android aggiorna per loro dall'app; (b) una versione web dell'app, usabile dal browser dell'iPhone (nuovo scope, da valutare).
 
 ## 4. Funzionalità — MVP
 
@@ -38,7 +40,7 @@ Una dashboard sulla smart TV LG del soggiorno, aperta come app quando serve, che
 - Dall'app si segna un'area come completata.
 
 ### 4.3 "E altro"
-Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP questo resta fuori scope esplicito — vedi §5 — ma il data model (PRP §3) è pensato per essere esteso senza ristrutturare tutto. **[DA DEFINIRE]** cosa vuoi aggiungere dopo l'MVP: lista spesa condivisa? bollette? avvisi/bacheca? calendario eventi di casa?
+Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP questo resta fuori scope esplicito — vedi §5 — ma il data model (PRP §3) è pensato per essere esteso senza ristrutturare tutto. La prima aggiunta candidata dopo l'MVP è una **bacheca avvisi**: messaggi brevi per tutti, visibili sulla TV. Resta fuori dall'MVP.
 
 ### 4.4 Vista TV
 - La TV si usa normalmente e di notte si spegne: la dashboard è un'app che si apre quando serve, non un contenuto sempre acceso.
@@ -46,11 +48,12 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - È un'app normale: se resta aperta a lungo senza input può comparire lo screensaver della TV. Si interviene solo se nell'uso reale dà fastidio (PRP §5).
 - Si aggiorna da sola quando qualcuno modifica qualcosa dall'app (refresh a breve intervallo, vedi PRP).
 - Resta installata tra un'accensione e l'altra senza intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
+- L'app installata sulla TV è un guscio: il codice vero si carica da una pagina pubblicata, così aggiornarla non richiede di tornare sul posto con un computer (PRP §2).
 
 ### 4.5 App Android
 - Distribuita fuori Play Store, via Obtainium, gratuitamente.
 - Mostra in tempo reale gli aggiornamenti fatti dagli altri coinquilini (presenze ai pasti e turni), senza dover ricaricare.
-- Login/identificazione semplice: **[DA DEFINIRE]** — la scelta più semplice è che ogni coinquilino selezioni il proprio nome da una lista fissa alla prima apertura (nessuna password, dato che l'app gira su dispositivi personali e i dati in gioco non sono sensibili); da confermare che vada bene così.
+- Identificazione: alla prima apertura ogni coinquilino sceglie il proprio nome dalla lista dei coinquilini attivi. Nessuna password, dato che l'app gira su dispositivi personali e i dati in gioco non sono sensibili.
 
 ## 5. Fuori scope per l'MVP (non-goal)
 
@@ -68,6 +71,7 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - **Budget: zero.** Nessun hardware aggiuntivo (niente Raspberry Pi/mini PC), nessun servizio a pagamento, nessun account Google Play a pagamento.
 - La TV è una LG con webOS; l'app ci gira come app homebrew via Developer Mode (gratuita, ma con sessione a tempo da rinnovare — vedi PRP).
 - Il PC di Pietro non è un server sempre acceso: nessun componente critico del sistema può dipendere dal fatto che resti acceso.
+- Il PC di sviluppo non sta sulla rete di casa dove vive la TV: installare il pacchetto richiede un computer sul posto, quindi il codice dell'app deve potersi aggiornare senza un nuovo sideload.
 
 ## 7. Come si misura il successo
 
@@ -80,10 +84,10 @@ Progetto personale, quindi metriche informali:
 
 Riassunto dei punti **[DA DEFINIRE]** sopra, da chiudere idealmente prima o durante lo sviluppo dell'MVP:
 
-1. Numero e nomi dei coinquilini che useranno il sistema.
-2. Tutti su Android? Se no, come gestire chi non può installare l'app.
+1. ~~Numero e nomi dei coinquilini che useranno il sistema.~~ Risolto in v0.4: 7 coinquilini attivi, nomi solo in Supabase (§3).
+2. Tutti su Android? No, alcuni hanno iPhone: resta da definire quanti sono e come aggiornano presenze e turni (§3).
 3. ~~Elenco esatto dei task di pulizia e cadenza della rotazione.~~ Risolto in v0.2: 7 aree, cadenza settimanale, assegnazione manuale dall'app (§4.2).
-4. Meccanismo di identificazione nell'app (selezione nome vs qualcos'altro).
-5. Cosa entra in "e altro" oltre a pasti e pulizie, per una v2.
+4. ~~Meccanismo di identificazione nell'app (selezione nome vs qualcos'altro).~~ Risolto in v0.4: selezione del nome da lista, senza password (§4.5).
+5. ~~Cosa entra in "e altro" oltre a pasti e pulizie, per una v2.~~ Risolto in v0.4: bacheca avvisi come prima aggiunta candidata dopo l'MVP (§4.3).
 
 Il PRP (documento tecnico di implementazione) procede assumendo le scelte più semplici sui punti sopra, chiaramente segnalate, così puoi partire subito e correggere in corsa dove serve.
