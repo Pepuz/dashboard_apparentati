@@ -8,7 +8,8 @@
   var MEALS = [['lunch', 'Pranzo'], ['dinner', 'Cena']];
   var WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
   var SCREENSAVER_URI = 'luna://com.webos.service.tvpower/power/';
-  var SCREENSAVER_CLIENT = 'com.apparentati.dashboard';
+  // Unique per launch: the TV keeps a closed app's registration until it restarts, and re-registering the same name fails with errorCode -3.
+  var SCREENSAVER_CLIENT = 'com.apparentati.dashboard.' + Date.now();
 
   var screensaverBridges = [];
 
