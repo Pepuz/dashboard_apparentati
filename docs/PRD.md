@@ -1,6 +1,6 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.5 (app TV come guscio aggiornabile da remoto)
+Versione: 0.6 (rinnovo della Developer Mode dal PC di un coinquilino)
 Autore: Pietro (con supporto Claude)
 Data: 2026-09-14, aggiornato 2026-09-15
 
@@ -72,6 +72,7 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - La TV è una LG con webOS; l'app ci gira come app homebrew via Developer Mode (gratuita, ma con sessione a tempo da rinnovare — vedi PRP).
 - Il PC di Pietro non è un server sempre acceso: nessun componente critico del sistema può dipendere dal fatto che resti acceso.
 - Il PC di sviluppo non sta sulla rete di casa dove vive la TV: installare il pacchetto richiede un computer sul posto, quindi il codice dell'app deve potersi aggiornare senza un nuovo sideload.
+- Sulla rete della TV c'è il PC fisso di un coinquilino, acceso quasi sempre o almeno una volta al giorno: con il suo consenso, ospita il rinnovo automatico della Developer Mode.
 
 ## 7. Come si misura il successo
 

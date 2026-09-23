@@ -6,7 +6,7 @@ Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV L
 
 - `supabase/migrations/` — schema e policy RLS (Fase 0)
 - `tv-app/` — app webOS, sola lettura (Fase 1)
-- `scripts/hermes/` — script Python di rinnovo Developer Mode (Fase 2)
+- `scripts/` — rinnovo automatico della Developer Mode dal PC di un coinquilino sulla rete della TV (Fase 2)
 - `mobile-app/` — app Android Flutter (Fase 3)
 
 ## Fase 0 — passi manuali prima della Fase 1

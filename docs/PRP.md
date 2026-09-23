@@ -1,6 +1,6 @@
 # PRP — Dashboard Appartamento (`flat-dashboard`)
 
-Versione: 0.4 (app TV come guscio aggiornabile da remoto)
+Versione: 0.5 (Fase 2: rinnovo dal PC di un coinquilino sulla rete della TV)
 Riferimento: `docs/PRD.md`
 Data: 2026-09-14, aggiornato 2026-09-15
 
@@ -13,8 +13,10 @@ Questo documento descrive **come** costruire quanto definito nel PRD: architettu
         |
    distribuita via Obtainium (GitHub Releases)
 
-[Script Python, Hermes-agent]  --rinnova periodicamente-->  [Developer Mode sessione TV]
-        (via aiowebostv/bscpylgtv, rete locale)
+[Attività pianificata, PC fisso di un coinquilino]  --rinnova ogni giorno-->  [Developer Mode sessione TV]
+        (ares-cli, rete locale della TV)
+
+[Hermes-agent, PC di sviluppo]  --promemoria di sicurezza-->  [Pietro: EXTEND a mano sulla TV]
 ```
 
 Punti chiave della scelta architetturale (dettagli e alternative scartate nella conversazione precedente):
@@ -31,7 +33,7 @@ Punti chiave della scelta architetturale (dettagli e alternative scartate nella 
 | App Android | Flutter (Dart) | Riusa l'esperienza già fatta su `money-manager-personal`. React Native è l'alternativa se si preferisce restare su TS, ma Flutter parte da zero attrito per te. |
 | Distribuzione app | Obtainium, sorgente GitHub Releases | Repo pubblico su GitHub, l'APK va allegato a ogni Release. **Stessa chiave di firma (keystore) per tutte le release**, altrimenti gli aggiornamenti si rompono per i coinquilini già installati. |
 | App TV | webOS homebrew app (HTML/CSS/JS, no framework pesante) | Sideload via Developer Mode + `ares-cli` (pacchetto npm `@webos-tools/cli`). Legge le API REST di Supabase con polling ogni 20 s, senza supabase-js né Realtime: nessuna dipendenza, nessuna migrazione, e codice con sintassi ES5 + `XMLHttpRequest`, per non dipendere dalla versione webOS della TV (TV finale: LG OLED48A16LA, webOS 6.5.3-47, motore Chromium 79); usa `Promise` e flexbox, quindi richiede un motore Chromium (verificato sul simulatore webOS TV 24). URL e publishable key in `tv-app/config.js`, generato dal `.env` e git-ignorato. L'app installata è un guscio: `index.html`, `config.js` e una copia di riserva di `app.js` restano sulla TV, mentre all'avvio `app.js` si carica da GitHub Pages (repo pubblico; il file pubblicato contiene solo codice, nessuna chiave), così gli aggiornamenti non richiedono un nuovo sideload. Screensaver: vedi §5. |
-| Manutenzione Developer Mode | Script Python con `aiowebostv` (o `bscpylgtv`) | Schedulato in Hermes-agent (cron esistente). Simula via rete locale l'accensione TV + apertura app Developer Mode + sequenza tasti per estendere la sessione. Frequenza: da tarare sulla durata reale della sessione osservata sulla tua TV (le fonti online divergono tra ~50h e ~1000h a seconda di modello/versione webOS: verificare il valore reale nell'app Developer Mode prima di fissare la cadenza dello script, e schedularlo con margine, es. a metà della finestra osservata; valore osservato sulla TV finale il 2026-09-16: 999h:55m, quindi circa 1000h; il 2026-09-23 era 838h:02m, quindi il timer scorre anche a TV spenta e il rinnovo serve circa ogni 41 giorni a prescindere dall'uso). La TV si spegne di notte: lo script deve trovarla accesa o accenderla prima di agire (da definire in Fase 2). |
+| Manutenzione Developer Mode | Attività pianificata con `ares-cli` sul PC fisso di un coinquilino, sulla rete della TV | La sessione dura circa 1000 ore e scorre anche a TV spenta (999h:55m il 2026-09-16, 838h:02m il 2026-09-23); alla scadenza le app installate in Developer Mode vengono disinstallate e la sessione non si può più prolungare. Il PC di sviluppo non è mai sulla rete della TV, quindi il rinnovo gira sul PC di un coinquilino, acceso quasi sempre o almeno una volta al giorno, con il suo consenso. Meccanismo, solo da fonte community (Dev Manager di webosbrew, issue #256): avviare sulla TV l'app Developer Mode con il parametro di estensione, via `luna://com.webos.applicationManager/launch` con `{"id": "com.palmdts.devmode", "params": {"extend": true}}`; il modo esatto di eseguirlo con `ares-cli` va verificato in Fase 2, prima a mano sulla TV. L'attività parte all'accensione del PC e a intervalli regolari: se la TV è spenta o irraggiungibile riprova al giro successivo, e i circa 41 giorni di sessione lasciano ampio margine. Chiave SSH della TV e log restano su quel PC, fuori dal repo. L'IP della TV cambia (DHCP): meglio riservarlo sul router. Rete di sicurezza: Hermes-agent, sul PC di sviluppo, manda un promemoria per premere EXTEND nell'app Developer Mode prima della scadenza. Scartati: script Python con `aiowebostv` sul PC di sviluppo, che non vede la TV, e la richiesta HTTP a `developer.lge.com/secure/ResetDevModeSession.dev`, fonte community contestata (risponde "success" ma il timer non si muove). |
 
 ## 3. Data model (Supabase / Postgres)
 
@@ -99,9 +101,9 @@ Creare progetto, schema sopra, RLS di base, popolare `roommates` e `cleaning_tas
 Pagina HTML/JS che legge da Supabase `meal_presence` (pranzo e cena di oggi, con ospiti e orari richiesti) e `cleaning_shifts` della settimana corrente (e della successiva il sabato e la domenica se ha già assegnazioni, o col tasto OK), e li mostra aggiornandosi con il polling. Nessuna grafica curata ancora, solo dati veri a schermo. L'app installata è un guscio che carica `app.js` da GitHub Pages, con la copia nel pacchetto come riserva. Screensaver: nel codice c'è solo il tentativo (1) di §5; il (2) resta un piano.
 *Checkpoint:* dati corretti prima in un browser desktop, poi sulla TV dopo il sideload via Developer Mode; una modifica fatta dalla dashboard Supabase compare sulla TV entro 30 s senza toccarla. Osservazione facoltativa, non bloccante: se e dopo quanti minuti di inattività compare lo screensaver con l'app aperta.
 
-**Fase 2 — Script di rinnovo Developer Mode**
-Script Python + integrazione in Hermes-agent.
-*Checkpoint:* osservare almeno un rinnovo automatico andato a buon fine senza intervento manuale, verificare che l'app installata sopravviva.
+**Fase 2 — Rinnovo automatico della Developer Mode**
+Comando di rinnovo verificato prima a mano sulla TV, poi script e attività pianificata con `ares-cli` sul PC del coinquilino, più il promemoria di sicurezza in Hermes-agent (§2).
+*Checkpoint:* almeno un rinnovo automatico osservato senza intervento manuale (Remain Session torna vicino a 1000h) e l'app installata ancora presente.
 
 **Fase 3 — App Android MVP**
 Schermata presenza ai pasti (pranzo e cena, oggi + prossimi giorni, con orario richiesto, ospiti e nota) e schermata turni pulizia (assegnazione delle aree della settimana, cambi all'ultimo, segna come fatto). Scrittura diretta su Supabase; gli aggiornamenti degli altri compaiono in tempo reale anche nell'app.
@@ -124,7 +126,9 @@ Coinvolgere i coinquilini, raccogliere feedback sull'uso reale per una settimana
 |---|---|
 | Lo screensaver copre la dashboard | Secondo la documentazione ufficiale LG lo screensaver parte sempre, tranne durante un video a schermo intero, e `enablePigScreenSaver` riguarda solo i video non a schermo intero: da solo non basta. Ordine dei tentativi in Fase 1: (1) chiamata Luna non documentata `luna://com.webos.service.tvpower/power/registerScreenSaverRequest` con risposta `ack: false` (solo fonti community); (2) video nero muto in loop a schermo intero dietro la dashboard, solo se lo screensaver dà fastidio nell'uso reale (piano sotto la tabella). `"enablePigScreenSaver": false` resta in `appinfo.json` finché il test sulla TV non chiarisce se serve. Da webOS TV 26 le chiamate Luna passano dal controllo `requiredACG` e la guida ACG non elenca un gruppo per `tvpower`: su quelle versioni il tentativo (1) può essere rifiutato (`Denied method call`), e da webOS TV 27 il campo è obbligatorio per tutte le app. La TV finale ha webOS 6.5.3, quindi il controllo ACG non la riguarda: il campo servirebbe solo passando a una TV con webOS 26 o successivo. Verificato sulla TV finale il 2026-09-23: il servizio `tvpower` esiste e la chiamata non viene rifiutata, ma la registrazione di un'app chiusa resta attiva fino al riavvio della TV e un nuovo tentativo con lo stesso nome fallisce (`errorCode -3`, "The client is already registered"); per questo il nome del client cambia a ogni avvio. Resta da osservare se la risposta `ack: false` blocca davvero lo screensaver. |
 | Il caricamento di `app.js` da GitHub Pages non funziona sulla TV | Nessuna documentazione LG dice se un'app locale possa caricare uno script da `https`: va verificato al primo avvio, e una riga di stato in basso dice quale copia è in uso. Se fallisce, il guscio usa la copia inclusa nel pacchetto e si torna ad aggiornare via sideload. Stessa riserva se la TV è offline o GitHub non risponde. |
-| Sessione Developer Mode scade e l'app sparisce dalla TV | Fase 2 copre il rinnovo automatico; comunque monitorare le prime settimane, non fidarsi ciecamente dello script al primo giro. |
+| Sessione Developer Mode scade e l'app sparisce dalla TV | Rinnovo automatico dal PC del coinquilino (Fase 2) più promemoria di sicurezza per premere EXTEND a mano; nelle prime settimane controllare Remain Session, senza fidarsi ciecamente dello script al primo giro. Se scade comunque: riattivare la Developer Mode e rifare il sideload (`docs/sideload-tv.md`). |
+| Il PC del coinquilino o la TV sono spenti quando parte il rinnovo | L'attività riprova a ogni avvio del PC e a intervalli regolari; con circa 41 giorni di sessione basta un tentativo riuscito ogni tanto. Il promemoria copre i casi peggiori. |
+| L'IP della TV cambia e lo script non la trova | Indirizzo riservato alla TV sul router (DHCP reservation). In alternativa, lo script aggiorna l'IP del dispositivo registrato prima di rinnovare (ricerca in rete di `ares-setup-device`, da verificare). |
 | Supabase va in pausa per inattività | Con uso quotidiano non dovrebbe accadere; se capita, il progetto si riattiva manualmente dalla dashboard Supabase — nessuna perdita dati. |
 | Coinquilini non installano l'app per l'attrito di Obtainium | Rischio reale e non tecnico: va spiegato bene il perché (niente Play Store = niente costi/account sviluppatore) e accompagnata l'installazione la prima volta. |
 | Firma APK cambiata tra una release e l'altra | Tenere il keystore in un posto sicuro fuori dal repo fin dalla prima build, mai rigenerarlo. |
