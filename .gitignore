@@ -27,6 +27,8 @@ node_modules/
 npm-debug.log*
 *.ipk
 tv-app/config.js
+scripts/devmode/renew.log
+scripts/devmode/next-check.txt
 
 # Python
 __pycache__/

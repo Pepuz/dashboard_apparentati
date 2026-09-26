@@ -6,7 +6,7 @@ Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV L
 
 - `supabase/migrations/` — schema e policy RLS (Fase 0)
 - `tv-app/` — app webOS, sola lettura (Fase 1)
-- `scripts/` — rinnovo automatico della Developer Mode dal PC di un coinquilino sulla rete della TV (Fase 2)
+- `scripts/devmode/` — rinnovo automatico della Developer Mode dal PC di un coinquilino sulla rete della TV (Fase 2)
 - `mobile-app/` — app Android Flutter (Fase 3)
 
 ## Fase 0 — passi manuali prima della Fase 1
@@ -154,10 +154,10 @@ Una volta sola:
    ```
 
    ```powershell
-   git push -u origin master
+   git push -u origin main
    ```
 
-3. Nel repo su GitHub: **Settings** → nella barra laterale, sezione **Code, planning, and automation**, **Pages** → sotto **Build and deployment**, in **Source** scegli **Deploy from a branch** → nel menu del branch scegli `master` e in quello della cartella la radice del repo → **Save**.
+3. Nel repo su GitHub: **Settings** → nella barra laterale, sezione **Code, planning, and automation**, **Pages** → sotto **Build and deployment**, in **Source** scegli **Deploy from a branch** → nel menu del branch scegli `main` e in quello della cartella la radice del repo → **Save**.
 
 4. Quando la pubblicazione è finita (la doc non dice quanto ci vuole), l'indirizzo `https://pepuz.github.io/dashboard_apparentati/tv-app/app.js` aperto nel browser mostra il codice.
 
@@ -166,12 +166,186 @@ Una volta sola:
 A ogni aggiornamento successivo:
 
 1. Modifica `tv-app/app.js`, esegui `node tv-app/app.test.js` e prova nel browser (sezione A).
-2. Commit e push su `master`.
+2. Commit e push su `main`.
 3. Sulla TV chiudi e riapri l'app.
 
 Un nuovo sideload serve ancora per modifiche a `index.html`, `appinfo.json` o `config.js` (URL o chiave), o per cambiare l'indirizzo da cui si carica il codice.
 
 **Checkpoint Fase 1 (dal PRP):** dati corretti nel browser e sulla TV, una modifica da Supabase compare sulla TV entro 30 s senza toccarla. L'osservazione dello screensaver è facoltativa.
+
+## Fase 2 — passi manuali
+
+Il rinnovo della Developer Mode gira sul PC fisso di un coinquilino, sulla rete della TV (PRP §2), con `scripts/devmode/renew-devmode.ps1`. L'attività pianificata lo avvia ogni ora, ma lo script contatta la TV solo nelle ultime 240 ore prima della scadenza, circa una volta al mese. Allora:
+
+1. trova la TV, anche se ha cambiato IP (cerca la porta 9922 sulla stessa rete), e legge il tempo residuo;
+2. avvia l'app Developer Mode con il parametro di estensione (metodo solo community, verificato su questa TV il 2026-09-24);
+3. rilegge il residuo per confermare il rinnovo, poi apre Dashboard casa: Developer Mode resta in primo piano e da remoto non si chiude.
+
+Il residuo si legge da `developer.lge.com/secure/CheckDevModeSession.dev`, anche questo solo community. Chiave SSH della TV, log (`renew.log`) e ora del prossimo controllo (`next-check.txt`) restano su quel PC. I comandi sono per Windows PowerShell 5.1 e usano `npm.cmd` e `ares-*.cmd`: il criterio di esecuzione predefinito di Windows 10 blocca gli script `.ps1`, compresi quelli che npm installa per `npm` e `ares` ([doc Microsoft](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-5.1)).
+
+Controllo della logica di decisione, con CLI, TV e servizio LG simulati:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/devmode/renew-devmode.test.ps1
+```
+
+### A. Prima di iniziare
+
+1. TV accesa. Nell'app **Developer Mode** annota l'IP e attiva **Key Server**.
+2. Sul PC del coinquilino apri **Windows PowerShell** dal menu Start, senza "Esegui come amministratore".
+3. Controlla se l'account è amministratore:
+
+   ```powershell
+   whoami /groups | Select-String 'S-1-5-32-544'
+   ```
+
+   Se compare una riga, l'account è nel gruppo Administrators e l'attività della sezione E girerà senza finestre. Se non compare nulla, vedi la nota nella sezione E.
+
+### B. Node e CLI di LG
+
+1. Controlla Node: serve la versione 20 o successiva. Se c'è, passa al punto 3.
+
+   ```powershell
+   node --version
+   ```
+
+2. Scarica da <https://nodejs.org/dist/latest-v24.x/> il file `node-v24.…-x64.msi` (il 2026-09-24 era `node-v24.21.0-x64.msi`), aprilo e completa l'installazione con le opzioni predefinite: Windows chiede il permesso di amministratore. Poi chiudi e riapri PowerShell.
+
+3. Installa il CLI nella versione con cui lo script è stato verificato:
+
+   ```powershell
+   npm.cmd install -g @webos-tools/cli@3.2.6
+   ```
+
+   ```powershell
+   ares.cmd -V
+   ```
+
+   Atteso: `Version: 3.2.6`. Se `ares.cmd` non è riconosciuto, aggiungi al PATH della sola finestra corrente la cartella dei pacchetti globali di npm:
+
+   ```powershell
+   $env:Path = "$env:APPDATA\npm;$env:Path"
+   ```
+
+### C. Registra la TV
+
+1. Sostituisci `IP_DELLA_TV` con l'indirizzo annotato al punto A1:
+
+   ```powershell
+   ares-setup-device.cmd --add tv -i "host=IP_DELLA_TV" -i "port=9922" -i "username=prisoner"
+   ```
+
+2. Scarica la chiave: il comando chiede la passphrase di 6 caratteri mostrata sulla TV (maiuscole e minuscole contano).
+
+   ```powershell
+   ares-novacom.cmd --device tv --getkey
+   ```
+
+3. Verifica il collegamento:
+
+   ```powershell
+   ares-device.cmd --device tv --system-info
+   ```
+
+   Atteso: `modelName : OLED48A16LA` e `firmwareVersion : 03.53.45`.
+
+### D. Copia lo script e prova a mano
+
+1. Crea la cartella dello script e spostati lì:
+
+   ```powershell
+   New-Item -ItemType Directory "$env:USERPROFILE\dashboard-devmode"
+   ```
+
+   ```powershell
+   Set-Location "$env:USERPROFILE\dashboard-devmode"
+   ```
+
+2. Scarica lo script dal repo pubblico:
+
+   ```powershell
+   curl.exe -L -o renew-devmode.ps1 https://raw.githubusercontent.com/Pepuz/dashboard_apparentati/main/scripts/devmode/renew-devmode.ps1
+   ```
+
+3. Prova a mano. Senza `next-check.txt` lo script rinnova subito: sulla TV compare Developer Mode e, entro circa due minuti, Dashboard casa.
+
+   ```powershell
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\renew-devmode.ps1
+   ```
+
+   ```powershell
+   Get-Content .\renew.log
+   ```
+
+   Atteso: una riga `OK renewed at …`, con il residuo prima e dopo (vicino a 1000 h).
+
+4. Cancella il prossimo controllo, così anche il primo giro dell'attività pianificata rinnova: è il rinnovo automatico del checkpoint.
+
+   ```powershell
+   Remove-Item .\next-check.txt
+   ```
+
+### E. Attività pianificata
+
+Dalla stessa finestra, nella cartella dello script. Il primo giro parte dopo 5 minuti, poi ogni ora e a ogni accesso dell'utente ([doc Microsoft](https://learn.microsoft.com/powershell/module/scheduledtasks/register-scheduledtask)).
+
+```powershell
+$user = "$env:USERDOMAIN\$env:USERNAME"
+$action = New-ScheduledTaskAction -Execute 'powershell.exe' -Argument "-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$PWD\renew-devmode.ps1`""
+$triggers = (New-ScheduledTaskTrigger -AtLogOn -User $user), (New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(5) -RepetitionInterval (New-TimeSpan -Hours 1))
+$principal = New-ScheduledTaskPrincipal -UserId $user -LogonType S4U
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -ExecutionTimeLimit (New-TimeSpan -Minutes 10) -MultipleInstances IgnoreNew
+Register-ScheduledTask -TaskName 'dashboard-devmode' -Action $action -Trigger $triggers -Principal $principal -Settings $settings
+```
+
+Con `S4U` l'attività gira senza finestre, anche a utente disconnesso, e non memorizza la password; parte solo se l'utente ha il diritto di accesso come processo batch, che di default hanno gli amministratori ([doc Microsoft](https://learn.microsoft.com/windows/win32/taskschd/security-contexts-for-running-tasks)). Se al punto A3 non è comparso nulla, usa `-LogonType Interactive`: l'attività gira solo con l'utente collegato e a ogni giro può comparire per un attimo una finestra di PowerShell.
+
+Controlla che la ripetizione oraria non abbia scadenza: il secondo blocco deve mostrare `Interval : PT1H` e `Duration` vuoto.
+
+```powershell
+(Get-ScheduledTask -TaskName 'dashboard-devmode').Triggers.Repetition | Format-List Interval, Duration
+```
+
+Dopo 5 minuti:
+
+```powershell
+Get-ScheduledTaskInfo -TaskName 'dashboard-devmode'
+```
+
+```powershell
+Get-Content .\renew.log -Tail 3
+```
+
+`LastTaskResult` 0 vuol dire riuscito, 1 che lo script ha scritto un problema nel log. Sulla TV devono comparire Developer Mode e poi Dashboard casa, con Remain Session vicino a 1000 h.
+
+**Checkpoint Fase 2 (dal PRP):** almeno un rinnovo automatico osservato senza intervento manuale (Remain Session torna vicino a 1000 h e il log lo registra) e l'app installata ancora presente.
+
+### F. Leggere il log
+
+| Riga | Significato |
+| --- | --- |
+| `OK renewed at IP: X -> Y h left` | rinnovo confermato dal servizio LG |
+| `OK no renewal needed, X h left` | la sessione era già stata rinnovata, per esempio con EXTEND: nessun avvio |
+| `TV not reachable …` | TV spenta o fuori rete: riprova al giro successivo |
+| `TV address changed: A -> B` | IP della TV cambiato, dispositivo `tv` aggiornato |
+| `WARN time left unknown: …` | servizio LG o token non disponibili |
+| `WARN renewal launched at IP but not confirmed` | avviato senza poter verificare: prossimo controllo fra 760 h |
+| `FAIL renewal launched at IP but X h left …` | il timer non si è mosso: riprova fra 24 h |
+| `ERROR …` | errore imprevisto: riprova al giro successivo |
+
+`next-check.txt` contiene l'ora (UTC) in cui lo script tornerà a contattare la TV; cancellarlo forza un rinnovo al giro successivo.
+
+### G. Se il coinquilino lascia la casa
+
+```powershell
+Unregister-ScheduledTask -TaskName 'dashboard-devmode' -Confirm:$false
+```
+
+```powershell
+ares-setup-device.cmd --remove tv
+```
+
+La chiave privata della TV resta in `%USERPROFILE%\.ssh\tv_webos` (così sul portatile di lavoro; LG non documenta il percorso): cancellala insieme alla cartella `dashboard-devmode`. Se vuoi, disinstalla anche il CLI con `npm.cmd uninstall -g @webos-tools/cli`.
 
 ## Licenza
 
