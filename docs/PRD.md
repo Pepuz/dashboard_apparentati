@@ -1,8 +1,8 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.6 (rinnovo della Developer Mode dal PC di un coinquilino)
+Versione: 0.7 (app per telefono come web app, per Android e iPhone)
 Autore: Pietro (con supporto Claude)
-Data: 2026-09-14, aggiornato 2026-09-15
+Data: 2026-09-14, aggiornato 2026-09-30
 
 ## 1. Problema
 
@@ -10,16 +10,16 @@ In casa servono coordinamento su tre cose che oggi probabilmente passano per mes
 
 ## 2. Obiettivo
 
-Una dashboard sulla smart TV LG del soggiorno, aperta come app quando serve, che mostra lo stato condiviso di casa e si aggiorna da sola, alimentata da un'app Android che i coinquilini usano per aggiornare presenze e turni. Sulla TV è a sola lettura: una volta aperta non richiede interazione, pensata per essere vista al volo passando in salotto.
+Una dashboard sulla smart TV LG del soggiorno, aperta come app quando serve, che mostra lo stato condiviso di casa e si aggiorna da sola, alimentata da una web app che i coinquilini aprono dal telefono, Android o iPhone, per aggiornare presenze e turni. Sulla TV è a sola lettura: una volta aperta non richiede interazione, pensata per essere vista al volo passando in salotto.
 
 ## 3. Utenti
 
 - Pietro (admin/manutentore del sistema)
-- Coinquilini (utenti finali dell'app Android)
+- Coinquilini (utenti finali dell'app per telefono)
 
 Coinquilini attivi: 7. I nomi stanno solo in Supabase, non nel repo.
 
-Non tutti hanno Android: chi ha iPhone non può installare l'app, perché Obtainium è Android-only. **[DA DEFINIRE]** quanti sono e come aggiornano presenze e turni. Opzioni: (a) un coinquilino con Android aggiorna per loro dall'app; (b) una versione web dell'app, usabile dal browser dell'iPhone (nuovo scope, da valutare).
+Tre coinquilini su sette hanno iPhone: per questo l'app per telefono è una web app, che funziona nel browser di entrambi i sistemi. Un'app iOS nativa richiederebbe l'Apple Developer Program, a pagamento.
 
 ## 4. Funzionalità — MVP
 
@@ -50,14 +50,15 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - Resta installata tra un'accensione e l'altra senza intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
 - L'app installata sulla TV è un guscio: il codice vero si carica da una pagina pubblicata, così aggiornarla non richiede di tornare sul posto con un computer (PRP §2).
 
-### 4.5 App Android
-- Distribuita fuori Play Store, via Obtainium, gratuitamente.
-- Mostra in tempo reale gli aggiornamenti fatti dagli altri coinquilini (presenze ai pasti e turni), senza dover ricaricare.
+### 4.5 App per telefono
+- Web app aperta da un link, su Android e iPhone: niente store né installazione, si può aggiungere alla schermata Home. Gratuita.
+- Il link si condivide solo in casa: senza, il sito pubblicato non mostra dati.
+- Mostra entro pochi secondi gli aggiornamenti fatti dagli altri coinquilini (presenze ai pasti e turni), senza dover ricaricare.
 - Identificazione: alla prima apertura ogni coinquilino sceglie il proprio nome dalla lista dei coinquilini attivi. Nessuna password, dato che l'app gira su dispositivi personali e i dati in gioco non sono sensibili.
 
 ## 5. Fuori scope per l'MVP (non-goal)
 
-- App iOS (Obtainium copre solo Android; se serve iOS si valuta in un secondo momento con un canale diverso, es. bot Telegram come discusso in alternativa).
+- App native per iOS o Android: la web app copre entrambi.
 - Autenticazione vera (password, OAuth) — si parte da selezione nome, senza protezione seria: non mettere nell'app nulla che non vada bene renda pubblico ai coinquilini stessi.
 - Notifiche push.
 - Multi-appartamento / multi-tenant.
@@ -86,7 +87,7 @@ Progetto personale, quindi metriche informali:
 Riassunto dei punti **[DA DEFINIRE]** sopra, da chiudere idealmente prima o durante lo sviluppo dell'MVP:
 
 1. ~~Numero e nomi dei coinquilini che useranno il sistema.~~ Risolto in v0.4: 7 coinquilini attivi, nomi solo in Supabase (§3).
-2. Tutti su Android? No, alcuni hanno iPhone: resta da definire quanti sono e come aggiornano presenze e turni (§3).
+2. ~~Tutti su Android?~~ Risolto in v0.7: 3 coinquilini su 7 hanno iPhone, quindi l'app per telefono è una web app (§3, §4.5).
 3. ~~Elenco esatto dei task di pulizia e cadenza della rotazione.~~ Risolto in v0.2: 7 aree, cadenza settimanale, assegnazione manuale dall'app (§4.2).
 4. ~~Meccanismo di identificazione nell'app (selezione nome vs qualcos'altro).~~ Risolto in v0.4: selezione del nome da lista, senza password (§4.5).
 5. ~~Cosa entra in "e altro" oltre a pasti e pulizie, per una v2.~~ Risolto in v0.4: bacheca avvisi come prima aggiunta candidata dopo l'MVP (§4.3).

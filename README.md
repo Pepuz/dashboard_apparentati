@@ -1,13 +1,13 @@
 # dashboard_apparentati
 
-Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV LG webOS e alimentata da un'app Android. Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [docs/PRD.md](docs/PRD.md), [docs/PRP.md](docs/PRP.md).
+Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV LG webOS e alimentata da una web app per telefono (Android e iPhone). Supabase è l'unico datastore condiviso, nessun backend proprio. Specifiche: [docs/PRD.md](docs/PRD.md), [docs/PRP.md](docs/PRP.md).
 
 ## Struttura
 
 - `supabase/migrations/` — schema e policy RLS (Fase 0)
 - `tv-app/` — app webOS, sola lettura (Fase 1)
 - `scripts/devmode/` — rinnovo automatico della Developer Mode dal PC di un coinquilino sulla rete della TV (Fase 2)
-- `mobile-app/` — app Android Flutter (Fase 3)
+- `mobile-app/` — web app per telefono (Fase 3)
 
 ## Fase 0 — passi manuali prima della Fase 1
 
