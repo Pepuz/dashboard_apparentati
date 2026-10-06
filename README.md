@@ -347,6 +347,89 @@ ares-setup-device.cmd --remove tv
 
 La chiave privata della TV resta in `%USERPROFILE%\.ssh\tv_webos` (così sul portatile di lavoro; LG non documenta il percorso): cancellala insieme alla cartella `dashboard-devmode`. Se vuoi, disinstalla anche il CLI con `npm.cmd uninstall -g @webos-tools/cli`.
 
+## Fase 3 — passi manuali
+
+L'app per telefono è in `mobile-app/`: una pagina HTML e JS senza dipendenze, pubblicata da GitHub Pages insieme all'app TV. Legge e scrive Supabase via REST (solo `meal_presence` e `cleaning_shifts`) e, mentre la pagina è visibile, rilegge ogni 10 s. URL e publishable key non stanno nel repo: viaggiano nel frammento del link (`#url=…&key=…`), che il browser non manda a GitHub, e restano salvati sul telefono. Il sito senza link non mostra dati.
+
+Controllo della logica (date, righe da scrivere, ospiti, assente senza orario né ospiti), senza rete:
+
+```powershell
+node mobile-app/app.test.js
+```
+
+### A. Il link
+
+```powershell
+pwsh -File mobile-app/make-link.ps1 | Set-Clipboard
+```
+
+Copia negli appunti il link `https://pepuz.github.io/dashboard_apparentati/mobile-app/#url=…&key=…`, composto da `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` del `.env`. Rifiuta chiavi che non iniziano con `sb_publishable_`. Chiunque abbia il link legge i nomi e può scrivere presenze e turni (non cancellarli): va condiviso solo in casa.
+
+Per provare nel browser del PC modifiche non ancora pubblicate, servi la cartella del repo con un server locale (serve Python 3):
+
+```powershell
+python -m http.server 8765 --bind 127.0.0.1
+```
+
+e nel link sostituisci `https://pepuz.github.io/dashboard_apparentati/` con `http://localhost:8765/`.
+
+### B. Prima apertura e uso
+
+1. Apri il link: compare **Chi sei?** con i coinquilini attivi. Tocca il tuo nome: resta salvato sul telefono, e **Cambia nome** in alto lo riporta alla scelta.
+2. **Pasti**: oggi e i 6 giorni successivi. Per ogni pasto la riga **Tu** e il tasto **Modifica**: Ci sono / Non ci sono, orario richiesto (facoltativo, **Nessun orario** lo toglie), un campo per ogni ospite (**+ ospite**, **×** per toglierlo), nota. Si salva solo con **Salva**. Chi non c'è non può avere orario né ospiti: passando a Non ci sono vengono tolti, la nota resta. Sotto, gli altri coinquilini divisi tra Ci sono, Non ci sono e Senza risposta.
+3. **Turni**: settimana corrente e successiva. Scegliere un nome dal menu di un'area la assegna subito e la riporta a "da fare"; **Segna fatto** / **Segna da fare** salva subito. Chiunque può farlo.
+4. In basso: `Aggiornato alle HH:MM:SS` (oppure l'errore) e da dove arriva la configurazione.
+
+Una risposta data non torna a "non specificato" e un'area assegnata non torna vuota: la RLS non permette cancellazioni da app. Le righe di prova si tolgono dal SQL Editor di Supabase (sezione E).
+
+### C. Schermata Home
+
+Diciture dalle guide ufficiali di Apple e Google, verificate il 2026-10-06; sul telefono possono variare leggermente.
+
+**Android, Chrome** ([guida Google](https://support.google.com/chrome/answer/15085120?hl=it&co=GENIE.Platform%3DAndroid)):
+
+1. Apri il link in Chrome. Se arriva in una chat, copialo e incollalo nella barra degli indirizzi: alcune app aprono i link in un browser interno.
+2. A destra della barra degli indirizzi tocca **Altro** (tre puntini) → **Installa e crea scorciatoia** → **Crea scorciatoia** → **Aggiungi**.
+3. La scorciatoia si apre in Chrome e usa gli stessi dati salvati.
+
+**iPhone, Safari** ([guida Apple](https://support.apple.com/it-it/guide/iphone/iph42ab2f3a7/ios)):
+
+1. Apri il link in Safari.
+2. Tocca **Altro** (tre puntini) → **Condividi** (con il layout dei pannelli "In basso" o "In alto", direttamente **Condividi**; su iOS 18 il pulsante **Condividi** nella barra dei menu).
+3. Scorri e tocca **Aggiungi alla schermata Home** (se manca: in fondo all'elenco **Modifica azioni**). Su iOS 26 lascia attivo **Apri come app web**, poi **Aggiungi**.
+4. Aperta dall'icona come app web, iOS le dà una memoria separata da Safari ([WebKit](https://webkit.org/tracking-prevention/)): alla prima apertura il nome va scelto di nuovo. URL e chiave arrivano dal link salvato nell'icona (verificato su iPhone il 2026-10-06).
+
+Senza manifest di proposito: il suo `start_url` sostituirebbe il link, e con lui il frammento che porta URL e chiave.
+
+### D. Prova incrociata con la TV
+
+1. Accendi la TV e apri Dashboard casa. Su due telefoni (meglio un Android e un iPhone) apri l'app e lasciali con lo schermo acceso.
+2. Dal primo telefono: oggi, un pasto → **Modifica** → **Ci sono**, nota `prova` → **Salva**. Annota l'ora.
+3. Senza toccarli: il secondo telefono deve mostrare la modifica entro 15 s, la TV entro 30 s (la TV mostra solo i pasti di oggi e i turni della settimana corrente).
+4. Ripeti dal secondo telefono verso il primo, poi con **Segna fatto** su un'area della settimana corrente.
+
+### E. Righe di prova
+
+Le righe scritte con la publishable key non si cancellano via API. Dal SQL Editor di Supabase, prima controlla quali sono:
+
+```sql
+select * from meal_presence where note = 'prova';
+```
+
+poi, se sono solo quelle di prova:
+
+```sql
+delete from meal_presence where note = 'prova';
+```
+
+Le assegnazioni di prova dei turni si correggono dall'app, riassegnando l'area.
+
+### F. Aggiornare l'app
+
+Commit e push su `main`: GitHub Pages pubblica entro qualche minuto (fino a 10 secondo la [doc GitHub](https://docs.github.com/en/pages/quickstart)) e i browser possono tenere in cache la versione precedente per altri 10 minuti (`Cache-Control: max-age=600`, misurato il 2026-09-30). Poi chiudi e riapri l'app sul telefono.
+
+**Checkpoint Fase 3 (dal PRP):** `node mobile-app/app.test.js` passa; da un Android e da un iPhone una modifica compare sulla TV entro 30 s e sull'altro telefono entro 15 s, senza ricaricare.
+
 ## Licenza
 
 MIT, vedi [LICENSE](LICENSE).

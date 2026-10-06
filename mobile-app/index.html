@@ -6,13 +6,31 @@
   <!-- No web app manifest: its start_url would replace the link, and the fragment that carries URL and key would be lost. -->
   <title>Casa</title>
   <style>
-    body { margin: 0; padding: 16px; font: 17px/1.4 system-ui, -apple-system, sans-serif; }
-    footer { margin-top: 24px; font-size: 14px; color: #666; }
+    /* Chrome's pull-to-refresh would reload the page and drop an unsaved meal form; polling keeps the data fresh. */
+    body { margin: 0; padding: 16px; font: 17px/1.4 system-ui, -apple-system, sans-serif; background: #fff; color: #111; overscroll-behavior-y: contain; }
+    h1 { font-size: 24px; margin: 0 0 8px; }
+    h2 { font-size: 22px; margin: 28px 0 4px; }
+    h3 { font-size: 19px; margin: 20px 0 4px; }
+    h4 { font-size: 17px; margin: 12px 0 2px; }
+    p { margin: 2px 0; }
+    ul { list-style: none; margin: 0; padding: 0; }
+    li { margin: 8px 0; }
+    button, select, input { font: inherit; }
+    button, select { min-height: 40px; }
+    header { display: flex; justify-content: space-between; align-items: center; }
+    form { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin: 6px 0; }
+    fieldset { border: 0; margin: 0; padding: 0; }
+    form label, .guest, .actions { display: block; margin: 8px 0; }
+    input[name=guest], input[name=note] { width: 70%; }
+    .picker button { width: 100%; text-align: left; }
+    .muted { color: #555; }
+    .done { color: #186a1e; }
     .error { color: #c00; }
+    footer { position: sticky; bottom: 0; margin-top: 24px; padding: 8px 0; border-top: 1px solid #ddd; background: #fff; font-size: 14px; color: #666; }
   </style>
 </head>
 <body>
-  <main id="app"></main>
+  <main id="app"><p>Caricamento…</p></main>
   <footer>
     <div id="sync"></div>
     <div id="source"></div>
