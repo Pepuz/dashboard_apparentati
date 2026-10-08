@@ -11,7 +11,7 @@
   const MEALS = [['lunch', 'Pranzo'], ['dinner', 'Cena']];
   const WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
 
-  // Date helpers copied from tv-app/app.js: the TV copy stays untouched because it is installed on the TV.
+  // Date helpers copied from tv-app/app.js, which stays in ES5 for the TV's engine.
   function pad(n) {
     return (n < 10 ? '0' : '') + n;
   }
@@ -53,8 +53,61 @@
     return parts.join(' · ');
   }
 
+  // ISO weekday as stored in meal_defaults: 1 = Monday, 7 = Sunday.
+  function isoWeekday(d) {
+    return d.getDay() || 7;
+  }
+
+  function weekdayOf(iso) {
+    const parts = iso.split('-').map(Number);
+    return isoWeekday(new Date(parts[0], parts[1] - 1, parts[2]));
+  }
+
+  // The day's answer wins over the weekly habit; a habit carries no time, guests or note.
   function presenceOf(roommate, date, meal) {
-    return roommate.meal_presence.find((p) => p.date === date && p.meal === meal) || null;
+    const answer = roommate.meal_presence.find((p) => p.date === date && p.meal === meal);
+    if (answer) return answer;
+    const weekday = weekdayOf(date);
+    const habit = roommate.meal_defaults.find((h) => h.weekday === weekday && h.meal === meal && h.is_present !== null);
+    return habit ? { is_present: habit.is_present, required_time: null, guest_names: [], note: null } : null;
+  }
+
+  function habitOf(roommate, weekday, meal) {
+    const habit = roommate.meal_defaults.find((h) => h.weekday === weekday && h.meal === meal);
+    return habit && habit.is_present !== null ? habit.is_present : null;
+  }
+
+  // valueOf(weekday, meal) gives 'yes', 'no' or '' (no habit): every cell is written, a cleared one as null.
+  function habitRows(roommateId, valueOf, now) {
+    const rows = [];
+    for (let weekday = 1; weekday <= 7; weekday++) {
+      MEALS.forEach((meal) => {
+        const value = valueOf(weekday, meal[0]);
+        rows.push({
+          roommate_id: roommateId,
+          weekday: weekday,
+          meal: meal[0],
+          is_present: value === '' ? null : value === 'yes',
+          updated_at: now.toISOString()
+        });
+      });
+    }
+    return rows;
+  }
+
+  // e.g. "Pranzo: di solito non ci sono lun, mar, mer, gio, ven".
+  function habitLines(roommate) {
+    const lines = [];
+    MEALS.forEach((meal) => {
+      [[true, 'di solito ci sono'], [false, 'di solito non ci sono']].forEach((kind) => {
+        const days = [];
+        for (let weekday = 1; weekday <= 7; weekday++) {
+          if (habitOf(roommate, weekday, meal[0]) === kind[0]) days.push(WEEKDAYS[weekday % 7].slice(0, 3));
+        }
+        if (days.length) lines.push(meal[1] + ': ' + kind[1] + ' ' + days.join(', '));
+      });
+    });
+    return lines;
   }
 
   function shiftFor(task, week) {
@@ -183,7 +236,8 @@
     const thisWeek = isoDate(weekStart(today));
     const nextWeek = isoDate(addDays(weekStart(today), 7));
     const results = await Promise.all([
-      get(config, 'roommates?select=id,name,meal_presence(date,meal,is_present,required_time,guest_names,note)' +
+      get(config, 'roommates?select=id,name,meal_presence(date,meal,is_present,required_time,guest_names,note),' +
+        'meal_defaults(weekday,meal,is_present)' +
         '&active=eq.true&meal_presence.date=gte.' + first + '&meal_presence.date=lte.' + lastDay + '&order=name.asc'),
       get(config, 'cleaning_tasks?select=id,name,cleaning_shifts(roommate_id,week_start,status,roommates(name))' +
         '&active=eq.true&cleaning_shifts.week_start=in.(' + thisWeek + ',' + nextWeek + ')' +
@@ -215,6 +269,24 @@
       '</form>';
   }
 
+  function habitsForm(roommate) {
+    const option = (value, label, selected) =>
+      '<option value="' + value + '"' + (selected ? ' selected' : '') + '>' + label + '</option>';
+    let rows = '';
+    for (let weekday = 1; weekday <= 7; weekday++) {
+      const day = WEEKDAYS[weekday % 7];
+      rows += '<tr><th>' + day + '</th>' + MEALS.map((meal) => {
+        const habit = habitOf(roommate, weekday, meal[0]);
+        return '<td><select name="h-' + weekday + '-' + meal[0] + '" aria-label="' + meal[1] + ' ' + day + '">' +
+          option('', 'nessuna', habit === null) + option('yes', 'ci sono', habit === true) +
+          option('no', 'non ci sono', habit === false) + '</select></td>';
+      }).join('') + '</tr>';
+    }
+    return '<form data-form="habits"><table><tr><th></th><th>Pranzo</th><th>Cena</th></tr>' + rows + '</table>' +
+      '<div class="actions"><button type="submit">Salva</button> ' +
+      '<button type="button" data-action="cancel-habits">Annulla</button></div></form>';
+  }
+
   function start(doc) {
     const app = doc.getElementById('app');
     const fromLink = parseLink(location.hash);
@@ -222,6 +294,7 @@
     let me = loadItem(ROOMMATE_ITEM);
     let last = null;
     let editing = null;
+    let editingHabits = false;
     let saveError = null;
     let pickerAt = 0;
     let latest = 0;
@@ -308,24 +381,39 @@
         renderWeek('Settimana successiva, dal ' + dayMonth(last.nextWeek), last.nextWeek));
     }
 
+    function renderHabits() {
+      const box = doc.getElementById('habits');
+      if (!box) return;
+      const mine = last.roommates.find((r) => r.id === me);
+      const lines = habitLines(mine);
+      paint(box, editingHabits
+        ? habitsForm(mine)
+        : (lines.length ? lines.map((line) => '<p>' + escapeHtml(line) + '</p>').join('') : '<p>Nessuna abitudine.</p>') +
+          '<p class="muted">Valgono per i pasti a cui non hai risposto.</p>' +
+          '<button data-action="edit-habits">Modifica abitudini</button>');
+    }
+
     // A native picker gives no event when it closes without a choice, so a focused select blocks renders for a while only.
     function pickerOpen() {
       return doc.activeElement.tagName === 'SELECT' && Date.now() - pickerAt < PICKER_MS;
     }
 
-    // Each section is redrawn unless that would discard a meal draft or close an open picker.
+    // Each section is redrawn unless that would discard a draft or close an open picker.
     function render() {
       const mine = last.roommates.find((r) => r.id === me);
       if (!mine) {
         editing = null;
+        editingHabits = false;
         renderPicker();
         return;
       }
-      paint(app, '<header></header><h2>Pasti</h2><div id="meals"></div><h2>Turni</h2><div id="shifts"></div>');
+      paint(app, '<header></header><h2>Pasti</h2><div id="meals"></div><h2>Turni</h2><div id="shifts"></div>' +
+        '<h2>Abitudini</h2><div id="habits"></div>');
       paint(app.querySelector('header'), '<strong>' + escapeHtml(mine.name) + '</strong> ' +
         '<button data-action="change-name">Cambia nome</button>');
       if (editing === null) renderMeals();
       if (!pickerOpen()) renderShifts();
+      if (!editingHabits) renderHabits();
     }
 
     // Responses can arrive out of order (a slow poll, a refresh on return to the page): an older one never replaces a newer one.
@@ -378,6 +466,20 @@
       }
     }
 
+    async function saveHabits(form) {
+      const rows = habitRows(me, (weekday, meal) => form.elements['h-' + weekday + '-' + meal].value, new Date());
+      const submit = form.querySelector('[type=submit]');
+      submit.disabled = true;
+      if (await save('meal_defaults', 'roommate_id,weekday,meal', rows)) {
+        // After Annulla or Cambia nome during the save, this form is gone and a reopened one must stay open.
+        if (form.isConnected) editingHabits = false;
+        await refresh();
+        if (!editingHabits) renderHabits();
+      } else {
+        submit.disabled = false;
+      }
+    }
+
     async function saveShift(el, roommateId, status) {
       if (await save('cleaning_shifts', 'task_id,week_start',
         shiftRow(el.dataset.task, el.dataset.week, roommateId, status, new Date()))) {
@@ -405,8 +507,15 @@
       } else if (action === 'change-name') {
         me = null;
         editing = null;
+        editingHabits = false;
         saveItem(ROOMMATE_ITEM, null);
         render();
+      } else if (action === 'edit-habits') {
+        editingHabits = true;
+        renderHabits();
+      } else if (action === 'cancel-habits') {
+        editingHabits = false;
+        renderHabits();
       } else if (action === 'edit') {
         editing = { date: el.dataset.date, meal: el.dataset.meal };
         renderMeals();
@@ -448,7 +557,8 @@
 
     app.addEventListener('submit', (e) => {
       e.preventDefault();
-      saveMeal(e.target);
+      if (e.target.dataset.form === 'habits') saveHabits(e.target);
+      else saveMeal(e.target);
     });
 
     if (!config) {
@@ -476,6 +586,9 @@
       escapeHtml: escapeHtml,
       describeMeal: describeMeal,
       parseLink: parseLink,
+      presenceOf: presenceOf,
+      habitRows: habitRows,
+      habitLines: habitLines,
       cleanGuests: cleanGuests,
       presenceRow: presenceRow,
       shiftRow: shiftRow,

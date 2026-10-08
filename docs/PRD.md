@@ -1,8 +1,8 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.7 (app per telefono come web app, per Android e iPhone)
+Versione: 0.8 (abitudini ai pasti per giorno della settimana)
 Autore: Pietro (con supporto Claude)
-Data: 2026-09-14, aggiornato 2026-09-30
+Data: 2026-09-14, aggiornato 2026-10-08
 
 ## 1. Problema
 
@@ -29,6 +29,7 @@ Tre coinquilini su sette hanno iPhone: per questo l'app per telefono è una web 
   - un **orario richiesto** facoltativo, quando per impegni deve mangiare a un'ora precisa;
   - gli **ospiti** che invita, come lista di nomi: il numero di ospiti è quanti nomi ci sono. Gli ospiti mangiano allo stesso orario di chi li invita; eventuali eccezioni vanno nella nota. Chi è assente non può segnare ospiti.
 - Per ogni pasto può aggiungere una **nota** libera facoltativa, anche se assente (es. "rientro tardi").
+- Può impostare delle **abitudini**: per il pranzo e per la cena di ogni giorno della settimana, "di solito ci sono", "di solito non ci sono" oppure nessuna (es. pranzo: non ci sono dal lunedì al venerdì). Un'abitudine vale per i pasti a cui non ha risposto; una risposta data per quel giorno è un'eccezione e prevale. TV e app mostrano una presenza che viene da un'abitudine come una risposta normale.
 - La TV mostra, per il pranzo e la cena di oggi, chi c'è, chi no, chi non ha risposto, gli ospiti e gli orari richiesti.
 
 ### 4.2 Turni di pulizia

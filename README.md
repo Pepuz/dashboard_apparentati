@@ -18,6 +18,7 @@ Dashboard di casa (presenze a pranzo e cena, turni pulizia) mostrata su una TV L
    2. `supabase/migrations/20260915000001_rls_policies.sql`
    3. `supabase/migrations/20260916000000_active_flags.sql`
    4. `supabase/migrations/20260916000001_meal_presence.sql`
+   5. `supabase/migrations/20261008000000_meal_defaults.sql` (abitudini ai pasti, Fase 3b)
 
 3. **Popola a mano `roommates` e `cleaning_tasks`**, dal Table Editor oppure dal SQL Editor (che gira con un ruolo privilegiato, quindi non è bloccato dalla RLS). Esempio, con i nomi dei coinquilini da sostituire:
 
@@ -349,7 +350,7 @@ La chiave privata della TV resta in `%USERPROFILE%\.ssh\tv_webos` (così sul por
 
 ## Fase 3 — passi manuali
 
-L'app per telefono è in `mobile-app/`: una pagina HTML e JS senza dipendenze, pubblicata da GitHub Pages insieme all'app TV. Legge e scrive Supabase via REST (solo `meal_presence` e `cleaning_shifts`) e, mentre la pagina è visibile, rilegge ogni 10 s. URL e publishable key non stanno nel repo: viaggiano nel frammento del link (`#url=…&key=…`), che il browser non manda a GitHub, e restano salvati sul telefono. Il sito senza link non mostra dati.
+L'app per telefono è in `mobile-app/`: una pagina HTML e JS senza dipendenze, pubblicata da GitHub Pages insieme all'app TV. Legge e scrive Supabase via REST (solo `meal_presence`, `cleaning_shifts` e, dalla Fase 3b, `meal_defaults`) e, mentre la pagina è visibile, rilegge ogni 10 s. URL e publishable key non stanno nel repo: viaggiano nel frammento del link (`#url=…&key=…`), che il browser non manda a GitHub, e restano salvati sul telefono. Il sito senza link non mostra dati.
 
 Controllo della logica (date, righe da scrivere, ospiti, assente senza orario né ospiti), senza rete:
 
@@ -363,7 +364,7 @@ node mobile-app/app.test.js
 pwsh -File mobile-app/make-link.ps1 | Set-Clipboard
 ```
 
-Copia negli appunti il link `https://pepuz.github.io/dashboard_apparentati/mobile-app/#url=…&key=…`, composto da `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` del `.env`. Rifiuta chiavi che non iniziano con `sb_publishable_`. Chiunque abbia il link legge i nomi e può scrivere presenze e turni (non cancellarli): va condiviso solo in casa.
+Copia negli appunti il link `https://pepuz.github.io/dashboard_apparentati/mobile-app/#url=…&key=…`, composto da `SUPABASE_URL` e `SUPABASE_PUBLISHABLE_KEY` del `.env`. Rifiuta chiavi che non iniziano con `sb_publishable_`. Chiunque abbia il link legge i nomi e può scrivere presenze, turni e abitudini (non cancellarli): va condiviso solo in casa.
 
 Per provare nel browser del PC modifiche non ancora pubblicate, servi la cartella del repo con un server locale (serve Python 3):
 
@@ -429,6 +430,65 @@ Le assegnazioni di prova dei turni si correggono dall'app, riassegnando l'area.
 Commit e push su `main`: GitHub Pages pubblica entro qualche minuto (fino a 10 secondo la [doc GitHub](https://docs.github.com/en/pages/quickstart)) e i browser possono tenere in cache la versione precedente per altri 10 minuti (`Cache-Control: max-age=600`, misurato il 2026-09-30). Poi chiudi e riapri l'app sul telefono.
 
 **Checkpoint Fase 3 (dal PRP):** `node mobile-app/app.test.js` passa; da un Android e da un iPhone una modifica compare sulla TV entro 30 s e sull'altro telefono entro 15 s, senza ricaricare.
+
+## Fase 3b — abitudini ai pasti
+
+Ogni coinquilino può dire, per il pranzo e la cena di ogni giorno della settimana, "di solito ci sono" o "di solito non ci sono". L'abitudine vale per i pasti a cui non ha risposto; la risposta di un giorno prevale. Telefono e TV la mostrano come una risposta normale. Le abitudini stanno nella tabella `meal_defaults`.
+
+### A. Migrazione, prima del codice
+
+Il codice nuovo chiede `meal_defaults` a Supabase: pubblicato prima che la tabella esista, la richiesta fallisce e la TV resta senza dati.
+
+1. Dal SQL Editor di Supabase, in una query nuova e vuota, incolla ed esegui tutto `supabase/migrations/20261008000000_meal_defaults.sql`, come le migrazioni della Fase 0. Non deve comparire nessun errore.
+2. Controlla tutto ciò che la migrazione crea, non solo i permessi:
+
+   ```sql
+   select 'column' as kind, column_name || ' ' || data_type || case when is_nullable = 'NO' then ' not null' else '' end || coalesce(' default ' || column_default, '') as detail
+   from information_schema.columns where table_schema = 'public' and table_name = 'meal_defaults'
+   union all
+   select 'constraint', conname || ': ' || pg_get_constraintdef(oid) from pg_constraint where conrelid = 'public.meal_defaults'::regclass
+   union all
+   select 'rls', relrowsecurity::text from pg_class where oid = 'public.meal_defaults'::regclass
+   union all
+   select 'policy', policyname || ' ' || cmd || ' ' || roles::text || ' using=' || coalesce(qual, '-') || ' check=' || coalesce(with_check, '-') from pg_policies where schemaname = 'public' and tablename = 'meal_defaults'
+   union all
+   select 'grant', p || '=' || has_table_privilege('anon', 'public.meal_defaults', p)::text from unnest(array['SELECT', 'INSERT', 'UPDATE', 'DELETE']) as p;
+   ```
+
+   Atteso: 5 colonne (`is_present` senza `not null`); 4 vincoli (chiave primaria su `roommate_id, weekday, meal`, chiave esterna verso `roommates`, controlli su `meal` e `weekday`); `rls` `true`; 3 policy per `{anon}` (SELECT, INSERT, UPDATE); `SELECT`, `INSERT`, `UPDATE` `true`. `DELETE` può essere `true` per i permessi predefiniti di Supabase: senza una policy di cancellazione la RLS la blocca comunque. Se manca qualcosa, per esempio le policy, esegui solo le istruzioni corrispondenti del file di migrazione e ricontrolla.
+
+### B. Pubblicazione
+
+1. Commit e push su `main`, poi attendi GitHub Pages (sezione F della Fase 3).
+2. Apri <https://pepuz.github.io/dashboard_apparentati/tv-app/app.js> nel browser e cerca `meal_defaults` (Ctrl+F): se c'è, la versione nuova è pubblicata. La riga `Codice: remoto` sulla TV dice solo che Pages ha risposto, non quale versione.
+3. Sulla TV chiudi e riapri Dashboard casa: il codice si carica solo all'avvio (sezione G della Fase 1). Sul telefono chiudi e riapri l'app: in fondo compare **Abitudini**.
+
+### C. Uso
+
+Nell'app, in fondo, **Abitudini** → **Modifica abitudini**: per ogni giorno, pranzo e cena a scelta tra nessuna, ci sono e non ci sono → **Salva**. Un'abitudine si toglie scegliendo "nessuna": la riga resta con `is_present` vuoto, perché da app non si cancella nulla.
+
+### D. Prova
+
+Per un pasto di oggi a cui non hai ancora risposto:
+
+1. Imposta "non ci sono" al pranzo del giorno di oggi: telefono e TV mostrano assente (la TV entro 30 s).
+2. Rimetti "nessuna": torna "non specificato".
+3. Rimetti "non ci sono", poi rispondi **Ci sono** per il pranzo di oggi con nota `prova`: la risposta prevale sull'abitudine.
+4. Pulizia: rimetti a "nessuna" le abitudini di prova dall'app, e togli le righe con nota `prova` dal SQL Editor, prima controllando:
+
+   ```sql
+   select * from meal_presence where note = 'prova';
+   ```
+
+   poi, se sono solo quelle di prova:
+
+   ```sql
+   delete from meal_presence where note = 'prova';
+   ```
+
+La copia di riserva di `app.js` inclusa nel pacchetto della TV non conosce le abitudini: se la TV non raggiunge GitHub Pages, i pasti senza risposta restano "non specificato".
+
+**Checkpoint Fase 3b (dal PRP):** `node mobile-app/app.test.js` e `node tv-app/app.test.js` passano; con l'abitudine "di solito non ci sono" a pranzo per il giorno di oggi e nessuna risposta, telefono e TV mostrano assente; una risposta "ci sono" per oggi prevale; togliendo l'abitudine torna "non specificato".
 
 ## Licenza
 

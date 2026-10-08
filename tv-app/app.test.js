@@ -19,6 +19,23 @@ assert.strictEqual(
   app.describeMeal({ is_present: true, required_time: '19:30:00', guest_names: ['Ospite 1', 'Ospite 2'], note: null }),
   'presente · ore 19:30 · ospiti (2): Ospite 1, Ospite 2');
 
+var habitual = {
+  meal_presence: [],
+  meal_defaults: [{ meal: 'lunch', is_present: false }, { meal: 'dinner', is_present: null }]
+};
+assert.strictEqual(app.describeMeal(app.presenceFor(habitual, 'lunch')), 'assente');
+assert.strictEqual(app.describeMeal(app.presenceFor(habitual, 'dinner')), 'non specificato');
+var answered = {
+  meal_presence: [{ meal: 'lunch', is_present: true, required_time: null, guest_names: [], note: null }],
+  meal_defaults: habitual.meal_defaults
+};
+assert.strictEqual(app.describeMeal(app.presenceFor(answered, 'lunch')), 'presente');
+var excepted = {
+  meal_presence: [{ meal: 'lunch', is_present: false, required_time: null, guest_names: [], note: null }],
+  meal_defaults: [{ meal: 'lunch', is_present: true }]
+};
+assert.strictEqual(app.describeMeal(app.presenceFor(excepted, 'lunch')), 'assente');
+
 assert.strictEqual(app.describeShift(null), 'non assegnata');
 assert.strictEqual(app.describeShift({ status: 'done', roommates: { name: 'Nome 1' } }), 'Nome 1 (fatto)');
 assert.strictEqual(app.describeShift({ status: 'pending', roommates: { name: 'Nome 1' } }), 'Nome 1 (da fare)');

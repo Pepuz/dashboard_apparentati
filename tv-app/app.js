@@ -56,6 +56,14 @@
     return parts.join(' · ');
   }
 
+  // The day's answer wins over the weekly habit; meal_defaults is already filtered to today's weekday.
+  function presenceFor(r, meal) {
+    var answer = r.meal_presence.filter(function (p) { return p.meal === meal; })[0];
+    if (answer) return answer;
+    var habit = r.meal_defaults.filter(function (h) { return h.meal === meal && h.is_present !== null; })[0];
+    return habit ? { is_present: habit.is_present, required_time: null, guest_names: [], note: null } : undefined;
+  }
+
   function describeShift(s) {
     if (!s) return 'non assegnata';
     return s.roommates.name + ' (' + (s.status === 'done' ? 'fatto' : 'da fare') + ')';
@@ -93,8 +101,9 @@
     var thisWeek = isoDate(weekStart(today));
     var nextWeek = isoDate(addDays(weekStart(today), 7));
     return Promise.all([
-      get('roommates?select=name,meal_presence(meal,is_present,required_time,guest_names,note)' +
-        '&active=eq.true&meal_presence.date=eq.' + isoDate(today) + '&order=name.asc'),
+      get('roommates?select=name,meal_presence(meal,is_present,required_time,guest_names,note),meal_defaults(meal,is_present)' +
+        '&active=eq.true&meal_presence.date=eq.' + isoDate(today) +
+        '&meal_defaults.weekday=eq.' + (today.getDay() || 7) + '&order=name.asc'),
       get('cleaning_tasks?select=name,cleaning_shifts(week_start,status,roommates(name))' +
         '&active=eq.true&cleaning_shifts.week_start=in.(' + thisWeek + ',' + nextWeek + ')' +
         '&order=sort_order.asc,name.asc')
@@ -106,8 +115,7 @@
   function renderMeals(data) {
     return MEALS.map(function (meal) {
       var items = data.roommates.map(function (r) {
-        var presence = r.meal_presence.filter(function (p) { return p.meal === meal[0]; })[0];
-        return '<li>' + escapeHtml(r.name + ': ' + describeMeal(presence)) + '</li>';
+        return '<li>' + escapeHtml(r.name + ': ' + describeMeal(presenceFor(r, meal[0]))) + '</li>';
       });
       return '<h2>' + meal[1] + '</h2><ul>' + items.join('') + '</ul>';
     }).join('');
@@ -215,6 +223,7 @@
       weekStart: weekStart,
       escapeHtml: escapeHtml,
       describeMeal: describeMeal,
+      presenceFor: presenceFor,
       describeShift: describeShift,
       nextWeekVisible: nextWeekVisible
     };
