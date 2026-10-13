@@ -10,6 +10,8 @@
   var SCREENSAVER_URI = 'luna://com.webos.service.tvpower/power/';
   // Unique per launch: the TV keeps a closed app's registration until it restarts, and re-registering the same name fails with errorCode -3.
   var SCREENSAVER_CLIENT = 'com.apparentati.dashboard.' + Date.now();
+  // Absolute: the page runs from the installed package, which has no style.css.
+  var ASSET_BASE = 'https://pepuz.github.io/dashboard_apparentati/tv-app/';
 
   var screensaverBridges = [];
 
@@ -158,6 +160,23 @@
     screensaverBridges = [subscription, responder];
   }
 
+  // Loaded here so the installed index.html needs no new sideload; without it the shell's inline style keeps the data readable.
+  function loadStyle(doc, setStatus) {
+    var link = doc.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = ASSET_BASE + 'style.css?t=' + Date.now();
+    link.onload = function () {
+      // Rejects if the font cannot be fetched from Pages; resolves empty if the style declares no Inter face.
+      doc.fonts.load('1em Inter').then(function (faces) {
+        setStatus('Stile: remoto, font ' + (faces.length ? 'Inter' : 'di sistema'), false);
+      }, function () {
+        setStatus('Stile: remoto, font Inter non caricato', true);
+      });
+    };
+    link.onerror = function () { setStatus('Stile: non caricato', true); };
+    doc.head.appendChild(link);
+  }
+
   function start(doc) {
     var last = null;
     var lastUpdate = '';
@@ -199,6 +218,11 @@
           setTimeout(poll, POLL_MS);
         });
     }
+
+    var styleStatus = doc.createElement('div');
+    styleStatus.id = 'style';
+    doc.querySelector('footer').appendChild(styleStatus);
+    loadStyle(doc, function (text, isError) { setStatus('style', text, isError); });
 
     keepScreenOn(function (text) { setStatus('screensaver', text, false); });
 

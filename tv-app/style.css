@@ -1,0 +1,7 @@
+/* Probe for phase 5, step 1: shows on the TV that a stylesheet and a font loaded by app.js from GitHub Pages are applied. */
+@font-face { font-family: Inter; font-weight: 400; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); }
+@font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); }
+@font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); }
+
+#style { font-family: Inter, sans-serif; }
+#style::after { content: ' (applicato)'; }
