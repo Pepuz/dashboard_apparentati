@@ -1,8 +1,8 @@
 # PRP — Dashboard Appartamento (`flat-dashboard`)
 
-Versione: 0.9 (Fase 3b: abitudini ai pasti)
+Versione: 0.10 (Fase 5: grafica della dashboard TV)
 Riferimento: `docs/PRD.md`
-Data: 2026-09-14, aggiornato 2026-10-08
+Data: 2026-09-14, aggiornato 2026-10-13
 
 Questo documento descrive **come** costruire quanto definito nel PRD: architettura, stack, data model, fasi di lavoro, criteri di accettazione e rischi noti. È pensato per essere dato in pasto a Claude Code come contesto di partenza per l'implementazione, non come specifica immutabile: ogni fase termina con un checkpoint in cui va verificato con l'uso reale prima di passare alla successiva.
 
@@ -94,7 +94,7 @@ Note:
 - `roommates` è popolata a mano da Pietro (nessuna UI di registrazione nell'MVP — coerente con l'identificazione "seleziona il tuo nome" del PRD). Chi lascia la casa si disattiva con `active = false` invece di essere cancellato: le chiavi esterne impediscono di cancellare righe con presenze o turni collegati. Stessa regola per `cleaning_tasks`.
 - `cleaning_tasks` contiene le 7 aree del PRD (sala, camera 1, camera 2, bagno 1, bagno 2, cucina, pavimenti e polveri delle mensole), popolate a mano.
 - Turni: nessuna rotazione automatica. Le righe di `cleaning_shifts` le crea e modifica l'app, da parte di qualsiasi coinquilino, settimana per settimana; un cambio all'ultimo è un update di `roommate_id` sulla riga esistente. Un solo responsabile per area per settimana (`unique (task_id, week_start)`).
-- Pasti: una riga per coinquilino, giorno e pasto (`lunch`/`dinner`); senza riga vale l'abitudine di quel giorno della settimana in `meal_defaults`, e senza abitudine il pasto è "non specificato". Una presenza da abitudine non ha orario, ospiti né nota e si mostra come una risposta. `guest_names` è la lista dei nomi degli ospiti e il numero di ospiti è `cardinality(guest_names)`; gli ospiti mangiano al `required_time` di chi li invita, le eccezioni vanno in `note`. Il vincolo `absent_has_no_guests_or_time` impedisce ospiti e orario richiesto quando `is_present` è falso; la nota è ammessa anche da assenti.
+- Pasti: una riga per coinquilino, giorno e pasto (`lunch`/`dinner`); senza riga vale l'abitudine di quel giorno della settimana in `meal_defaults`, e senza abitudine il pasto è "non specificato". Una presenza da abitudine non ha orario, ospiti né nota e si mostra come una risposta. `guest_names` è la lista dei nomi degli ospiti e il numero di ospiti è `cardinality(guest_names)`; gli ospiti mangiano al `required_time` di chi li invita, le eccezioni vanno in `note`. Il vincolo `absent_has_no_guests_or_time` impedisce ospiti e orario quando `is_present` è falso (la colonna resta `required_time`, ma da Fase 5 le app la chiamano "orario preferito"); la nota è ammessa anche da assenti.
 - Abitudini: una riga per coinquilino, giorno della settimana (`weekday` da 1 = lunedì a 7 = domenica, come `extract(isodow …)` in Postgres) e pasto. `is_present` nullo vuol dire "nessuna abitudine": un'abitudine si toglie con un upsert, perché la RLS non permette di cancellare.
 - Row Level Security: abilitata su tutte le tabelle. Le app usano la **publishable key** (`sb_publishable_...`), che sostituisce la anon key legacy in dismissione entro fine 2026. È pubblica per design (finisce nell'app TV e nel link dell'app per telefono), quindi da sola non protegge nulla: la protezione sono le policy RLS, che danno al ruolo `anon` lettura su tutto e scrittura (insert/update, mai delete) solo sulle tabelle che l'app aggiorna (`meal_presence`, `cleaning_shifts`, `meal_defaults`). `roommates` e `cleaning_tasks` si modificano solo dalla dashboard Supabase. La *secret key* non va mai in nessuna app né nel repo. Le policy non bastano: Postgres controlla prima i permessi di tabella. Quelli di `anon` su `meal_presence` e `cleaning_shifts` (SELECT, INSERT, UPDATE) sono verificati il 2026-10-01, ma Supabase non li concede più in automatico alle tabelle nuove (progetti nuovi da maggio 2026, esistenti dal 2026-10-30, [changelog](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically)): una tabella aggiunta in futuro, come la bacheca, richiede `grant` espliciti nella sua migrazione.
 - Aggiornamenti: la TV fa polling ogni 20 s (deciso in Fase 1) e l'app per telefono ogni 10 s (deciso in Fase 3), quindi la publication `supabase_realtime` non serve.
@@ -129,8 +129,17 @@ Link generato con `mobile-app/make-link.ps1` e condiviso solo in casa, con una p
 *Checkpoint:* un coinquilino con Android e uno con iPhone aprono il link su un telefono dove l'app non è mai stata aperta, scelgono il nome, la aggiungono alla schermata Home e la riaprono da lì.
 
 **Fase 5 — Rifinitura UI**
-Solo a questo punto: stile della vista TV (coerente con `pietro-neutral-ui`, essendo rivolta anche ai coinquilini) e dell'app.
-*Checkpoint:* leggibilità della TV da qualche metro di distanza, a colpo d'occhio.
+Grafica della dashboard TV sul modello di due bozze di Pietro, una chiara e una scura. I file restano fuori dal repo perché contengono i nomi veri. Le bozze sono un'idea di UI da adattare alla TV:
+- data in alto; schede Pranzo e Cena con un'icona ciascuna; per ogni coinquilino il nome con un simbolo di stato (✓ presente, ✗ assente, ? non specificato) e, solo se hanno un contenuto, le righe Ospiti, Orario preferito e Note;
+- schede Turni con icona, settimana e, per ogni area, il nome assegnato con lo stato oppure "non assegnata": la TV resta a sola lettura, quindi niente menu di scelta come nelle bozze;
+- la settimana successiva segue le regole di oggi (sabato e domenica se ha assegnazioni, tasto OK);
+- tema scuro di default, tema chiaro già implementato e pronto per un selettore futuro;
+- tutto più grande di oggi (testo 26 px, data 40 px), anche quanto c'è già;
+- stile, icone SVG ed eventuale font arrivano da GitHub Pages con indirizzi assoluti, caricati da `app.js`: `index.html` installato non cambia, quindi nessun sideload. La copia di riserva nel pacchetto resta con la grafica vecchia;
+- vincoli del motore Chromium 79: niente `gap` su flexbox (arriva con Chromium 84), quindi spaziature con CSS grid o margini; il tema non segue l'impostazione chiaro/scuro del sistema.
+
+Nell'app per telefono cambia solo l'etichetta "Orario richiesto" in "Orario preferito"; il suo stile si decide dopo.
+*Checkpoint:* `node tv-app/app.test.js` passa; la dashboard si legge dal divano a colpo d'occhio; nel caso peggiore (7 coinquilini con ospiti, orario e nota a pranzo e a cena) tutto entra nello schermo; provata nel browser del PC, nel simulatore webOS TV 24 e sulla TV, in tutti e due i temi.
 
 **Fase 6 — Rollout reale**
 Coinvolgere i coinquilini, raccogliere feedback sull'uso reale per una settimana prima di considerarlo "stabile".
