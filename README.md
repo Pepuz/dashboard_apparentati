@@ -496,7 +496,7 @@ La dashboard TV prende la grafica delle bozze (PRP, Fase 5): schede Pranzo, Cena
 
 Tutto arriva da GitHub Pages, quindi niente sideload: `tv-app/app.js` (codice e icone), `tv-app/style.css` e il font Inter in `tv-app/fonts/` (licenza SIL Open Font License 1.1, in `tv-app/fonts/OFL.txt`). `index.html` installato non cambia. La copia di riserva di `app.js` nel pacchetto resta con la grafica vecchia.
 
-Le schede partono con i dettagli a 28 px; solo se qualcosa non entra, il contenuto delle schede di un gruppo (pasti, turni) si rimpicciolisce insieme, fino a 18 px. Le righe Ospiti e Note più lunghe di due righe finiscono con "…".
+Nelle schede il testo prende la dimensione più grande che entra, con i dettagli tra 18 e 36 px: una dimensione per le due schede dei pasti, una per i turni. Un giorno con pochi dettagli arriva a 36 px; il caso peggiore (7 coinquilini con ospiti, orario e nota, più la settimana successiva) scende a 23. Le righe Ospiti e Note più lunghe di due righe finiscono con "…".
 
 In basso, oltre alle righe della Fase 1:
 

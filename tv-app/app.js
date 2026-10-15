@@ -9,6 +9,7 @@
   var DOWN_KEY = 40;
   var LIGHT_THEME = 'theme-light';
   var MIN_FONT_PX = 18;
+  var MAX_FONT_PX = 36;
   var MEALS = [['lunch', 'Pranzo'], ['dinner', 'Cena']];
   var WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
   var MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre',
@@ -164,7 +165,7 @@
 
   function overflowing(cards) {
     for (var i = 0; i < cards.length; i++) {
-      if (cards[i].scrollHeight > cards[i].clientHeight) return true;
+      if (cards[i].scrollHeight > cards[i].clientHeight || cards[i].scrollWidth > cards[i].clientWidth) return true;
     }
     return false;
   }
@@ -173,11 +174,11 @@
     for (var i = 0; i < cards.length; i++) cards[i].style.fontSize = value;
   }
 
-  // A normal day keeps the size from style.css; if any card of the group overflows, the whole group shrinks a pixel at a
-  // time, down to MIN_FONT_PX. Without style.css the cards have no fixed height, so nothing overflows and nothing shrinks.
+  // The largest size, from MAX_FONT_PX down a pixel at a time to MIN_FONT_PX, at which every card of the group fits.
+  // Only with style.css: without it the cards have no fixed height, nothing overflows and the text would jump to the maximum.
   function fit(cards) {
-    setFontSize(cards, '');
-    var size = parseFloat(cards[0].ownerDocument.defaultView.getComputedStyle(cards[0]).fontSize);
+    var size = MAX_FONT_PX;
+    setFontSize(cards, size + 'px');
     while (size > MIN_FONT_PX && overflowing(cards)) {
       size--;
       setFontSize(cards, size + 'px');
@@ -225,7 +226,9 @@
       Promise.all(['1em Inter', '700 1em Inter', '800 1em Inter'].map(function (font) { return doc.fonts.load(font); }))
         .then(function (results) {
           var all = results.every(function (faces) { return faces.length > 0; });
-          setStatus('Stile: remoto, font ' + (all ? 'Inter' : 'di sistema'), false);
+          // webOS can inject a stylesheet with its own font (the webOS 24 simulator does, see style.css): report the font in use.
+          var used = doc.defaultView.getComputedStyle(doc.getElementById('today')).fontFamily.split(',')[0].replace(/["']/g, '');
+          setStatus('Stile: remoto, font ' + (all ? used : 'di sistema'), false);
         }, function () {
           setStatus('Stile: remoto, font Inter non caricato', true);
         })
@@ -244,6 +247,7 @@
     var last = null;
     var lastUpdate = '';
     var toggle = null;
+    var styled = false;
 
     function setStatus(id, text, isError) {
       var el = doc.getElementById(id);
@@ -256,6 +260,7 @@
     }
 
     function fitAll() {
+      if (!styled) return;
       fit(doc.querySelectorAll('.meal'));
       fit(doc.querySelectorAll('.week'));
     }
@@ -291,6 +296,7 @@
     styleStatus.id = 'style';
     doc.querySelector('footer').appendChild(styleStatus);
     loadStyle(doc, function (text, isError) { setStatus('style', text, isError); }, function () {
+      styled = true;
       if (last) fitAll();
     });
 

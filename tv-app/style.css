@@ -1,6 +1,6 @@
 /* Loaded by app.js from GitHub Pages over the inline style of the installed index.html.
    Chromium 79 (webOS 6): no flexbox gap, so spacing comes from margins and grid-column-gap.
-   Sizes inside the cards are in em: app.js shrinks the cards' font-size when they overflow. */
+   Sizes inside the cards are in em: app.js gives each card group the largest font-size at which it fits. */
 @font-face { font-family: Inter; font-weight: 400; src: url(fonts/inter-latin-400-normal.woff2) format('woff2'); }
 @font-face { font-family: Inter; font-weight: 700; src: url(fonts/inter-latin-700-normal.woff2) format('woff2'); }
 @font-face { font-family: Inter; font-weight: 800; src: url(fonts/inter-latin-800-normal.woff2) format('woff2'); }
@@ -37,7 +37,11 @@ body {
   font: 28px/1.25 Inter, sans-serif;
 }
 
-#today { margin: 0 0 28px; font-size: 64px; line-height: 1; font-weight: 800; color: var(--accent); }
+/* The webOS 24 simulator injects `* { font-family: "LG Display-Regular"; font-weight: 400 !important; }` into the app:
+   `body *` outranks `*` for the family, and every weight other than 400 below needs !important. */
+body * { font-family: Inter, sans-serif; }
+
+#today { margin: 0 0 28px; font-size: 64px; line-height: 1; font-weight: 800 !important; color: var(--accent); }
 
 main {
   flex: 1;
@@ -52,22 +56,22 @@ main > section { min-height: 0; padding: 0; display: flex; flex-direction: colum
 
 .card { flex: 1; min-height: 0; overflow: hidden; padding: 28px 36px; border-radius: 40px; background: var(--card); }
 .card + .card { margin-top: 28px; }
-.card h2 { margin: 0 0 0.3em; font-size: 1.6em; line-height: 1.1; font-weight: 700; }
+.card h2 { margin: 0 0 0.3em; font-size: 1.6em; line-height: 1.1; font-weight: 700 !important; }
 .card ul { margin: 0; padding: 0; list-style: none; }
 .card li { margin-top: 0.45em; }
 
 .icon, .state { width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
 .accent, .week-start { color: var(--accent); }
-.week-start { margin-left: 0.3em; font-size: 0.62em; }
+.week-start { display: inline-block; font-size: 0.62em; font-weight: 700 !important; white-space: nowrap; }
 
-.who { font-size: 1.25em; font-weight: 700; }
+.who { font-size: 1.25em; font-weight: 700 !important; }
 .time { font-weight: 400; }
 .detail { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--soft); }
 
 .week li { display: flex; align-items: baseline; font-size: 1.1em; }
 .week .area { flex: 1; }
 .week .who { margin-left: 0.6em; font-size: 1em; white-space: nowrap; }
-.week .none { font-weight: 400; font-style: italic; color: var(--soft); }
+.week .none { font-weight: 400 !important; font-style: italic; color: var(--soft); }
 
 footer { left: 64px; right: 64px; bottom: 18px; display: flex; font: 18px/1.2 Inter, sans-serif; color: var(--soft); white-space: nowrap; }
 footer div { overflow: hidden; text-overflow: ellipsis; margin-right: 32px; }
