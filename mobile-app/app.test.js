@@ -45,6 +45,10 @@ assert.strictEqual(bare.required_time, null);
 assert.strictEqual(bare.note, null);
 assert.deepStrictEqual(bare.guest_names, []);
 
+// The column stays required_time; the screen calls it "orario preferito".
+const form = app.mealForm('2026-10-06', 'dinner', { is_present: true, required_time: '19:30:00', guest_names: [], note: null });
+assert.ok(form.includes('Orario preferito <input type="time" name="time" value="19:30">'));
+
 assert.deepStrictEqual(app.shiftRow('t1', '2026-10-05', 'r2', 'pending', now),
   { task_id: 't1', week_start: '2026-10-05', roommate_id: 'r2', status: 'pending', updated_at: '2026-10-06T10:00:00.000Z' });
 

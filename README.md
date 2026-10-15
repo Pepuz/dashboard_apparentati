@@ -377,7 +377,7 @@ e nel link sostituisci `https://pepuz.github.io/dashboard_apparentati/` con `htt
 ### B. Prima apertura e uso
 
 1. Apri il link: compare **Chi sei?** con i coinquilini attivi. Tocca il tuo nome: resta salvato sul telefono, e **Cambia nome** in alto lo riporta alla scelta.
-2. **Pasti**: oggi e i 6 giorni successivi. Per ogni pasto la riga **Tu** e il tasto **Modifica**: Ci sono / Non ci sono, orario richiesto (facoltativo, **Nessun orario** lo toglie), un campo per ogni ospite (**+ ospite**, **×** per toglierlo), nota. Si salva solo con **Salva**. Chi non c'è non può avere orario né ospiti: passando a Non ci sono vengono tolti, la nota resta. Sotto, gli altri coinquilini divisi tra Ci sono, Non ci sono e Senza risposta.
+2. **Pasti**: oggi e i 6 giorni successivi. Per ogni pasto la riga **Tu** e il tasto **Modifica**: Ci sono / Non ci sono, orario preferito (facoltativo, **Nessun orario** lo toglie), un campo per ogni ospite (**+ ospite**, **×** per toglierlo), nota. Si salva solo con **Salva**. Chi non c'è non può avere orario né ospiti: passando a Non ci sono vengono tolti, la nota resta. Sotto, gli altri coinquilini divisi tra Ci sono, Non ci sono e Senza risposta.
 3. **Turni**: settimana corrente e successiva. Scegliere un nome dal menu di un'area la assegna subito e la riporta a "da fare"; **Segna fatto** / **Segna da fare** salva subito. Chiunque può farlo.
 4. In basso: `Aggiornato alle HH:MM:SS` (oppure l'errore) e da dove arriva la configurazione.
 
@@ -489,6 +489,65 @@ Per un pasto di oggi a cui non hai ancora risposto:
 La copia di riserva di `app.js` inclusa nel pacchetto della TV non conosce le abitudini: se la TV non raggiunge GitHub Pages, i pasti senza risposta restano "non specificato".
 
 **Checkpoint Fase 3b (dal PRP):** `node mobile-app/app.test.js` e `node tv-app/app.test.js` passano; con l'abitudine "di solito non ci sono" a pranzo per il giorno di oggi e nessuna risposta, telefono e TV mostrano assente; una risposta "ci sono" per oggi prevale; togliendo l'abitudine torna "non specificato".
+
+## Fase 5 — passi manuali
+
+La dashboard TV prende la grafica delle bozze (PRP, Fase 5): schede Pranzo, Cena e Turni con icone, simbolo di stato per ogni coinquilino e per ogni area, tema scuro all'avvio e tema chiaro con le frecce su e giù del telecomando, senza salvare la scelta. Nell'app per telefono l'orario del pasto si chiama "Orario preferito"; la colonna in Supabase resta `required_time`.
+
+Tutto arriva da GitHub Pages, quindi niente sideload: `tv-app/app.js` (codice e icone), `tv-app/style.css` e il font Inter in `tv-app/fonts/` (licenza SIL Open Font License 1.1, in `tv-app/fonts/OFL.txt`). `index.html` installato non cambia. La copia di riserva di `app.js` nel pacchetto resta con la grafica vecchia.
+
+Le schede partono con i dettagli a 28 px; solo se qualcosa non entra, il contenuto delle schede di un gruppo (pasti, turni) si rimpicciolisce insieme, fino a 18 px. Le righe Ospiti e Note più lunghe di due righe finiscono con "…".
+
+In basso, oltre alle righe della Fase 1:
+
+| Riga | Significato |
+| --- | --- |
+| `Stile: remoto, font Inter` | grafica nuova completa |
+| `Stile: remoto, font Inter non caricato` o `font di sistema` | grafica nuova con il font della TV: misure diverse, ma l'adattamento tiene tutto nello schermo |
+| `Stile: non caricato` | `style.css` non raggiungibile: dati leggibili con lo stile del guscio, su tre colonne. Chiudi e riapri l'app |
+| nessuna riga `Stile:` | è in uso la copia di riserva (`Codice: copia locale`), con la grafica vecchia |
+
+Controllo della logica, senza rete:
+
+```powershell
+node tv-app/app.test.js
+```
+
+```powershell
+node mobile-app/app.test.js
+```
+
+### A. Pubblicazione
+
+1. Commit e push su `main`, poi attendi GitHub Pages (sezione F della Fase 3).
+2. Apri <https://pepuz.github.io/dashboard_apparentati/tv-app/style.css> nel browser e cerca `theme-light` (Ctrl+F): se c'è, la versione nuova è pubblicata.
+
+### B. Browser del PC
+
+1. Serve `tv-app/config.js` (Fase 1, sezione A, punto 1). Apri `tv-app/index.html` con doppio clic, in Chrome o Edge.
+2. Devi vedere la data nella forma `Martedì 13 ottobre 2026`, tre schede (Pranzo, Cena, Turni) e in basso `Codice: remoto` e `Stile: remoto, font Inter`. Una finestra più piccola dello schermo della TV rimpicciolisce le schede: per vederle come sulla TV, schermo intero con F11 su un monitor 1920×1080.
+3. Premi freccia su o freccia giù: tema chiaro. Ripremi: tema scuro.
+4. Premi Invio: la settimana successiva compare o sparisce, come con OK sulla TV.
+
+### C. Simulatore webOS TV 24
+
+Dalla root del repo, con al posto di `CARTELLA_DEL_SIMULATORE` la cartella che contiene `webOS_TV_24_Simulator_….exe` ([doc LG](https://webostv.developer.lge.com/develop/tools/cli-dev-guide)). Il comando non usa la TV.
+
+```powershell
+ares-launch -s 24 -sp "CARTELLA_DEL_SIMULATORE" tv-app
+```
+
+Ripeti i controlli della sezione B con i tasti del telecomando virtuale del simulatore (frecce e OK). Il simulatore 24 usa Chromium 108, la TV Chromium 79 ([doc LG](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine)): la compatibilità si prova solo sulla TV.
+
+### D. Sulla TV
+
+1. Se Dashboard casa è aperta, premi **Indietro** e conferma l'uscita dall'app; poi **Home** → **Dashboard casa**. Il codice si carica solo all'avvio.
+2. In basso: `Codice: remoto` e `Stile: remoto, font Inter`.
+3. Dal divano, a colpo d'occhio: la data; chi c'è (spunta verde), chi no (croce rossa), chi non ha risposto (punto di domanda grigio), con orario, ospiti e note; i turni (spunta verde fatto, cerchio vuoto da fare, "non assegnata").
+4. Freccia su o giù: tema chiaro. Ripeti il punto 3, poi riprova la freccia: torna lo scuro. Alla riapertura l'app parte sempre scura.
+5. OK: la settimana successiva compare o sparisce.
+
+**Checkpoint Fase 5 (dal PRP):** `node tv-app/app.test.js` e `node mobile-app/app.test.js` passano; la dashboard si legge dal divano a colpo d'occhio; nel caso peggiore (7 coinquilini con ospiti, orario e nota a pranzo e a cena, più la settimana successiva) tutto entra nello schermo; provata nel browser del PC, nel simulatore webOS TV 24 e sulla TV, in tutti e due i temi; senza lo stile remoto i dati restano leggibili.
 
 ## Licenza
 

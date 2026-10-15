@@ -257,7 +257,7 @@
       '<label><input type="radio" name="present" value="yes" required' + (present ? ' checked' : '') + '> Ci sono</label> ' +
       '<label><input type="radio" name="present" value="no"' + (p && !p.is_present ? ' checked' : '') + '> Non ci sono</label>' +
       '<fieldset class="if-present"' + (present ? '' : ' hidden') + '>' +
-      '<label>Orario richiesto <input type="time" name="time" value="' +
+      '<label>Orario preferito <input type="time" name="time" value="' +
       escapeHtml(p && p.required_time ? p.required_time.slice(0, 5) : '') + '"></label> ' +
       '<button type="button" data-action="clear-time">Nessun orario</button>' +
       '<div class="guests">' + (p ? p.guest_names.map(guestRow).join('') : '') + '</div>' +
@@ -592,6 +592,7 @@
       cleanGuests: cleanGuests,
       presenceRow: presenceRow,
       shiftRow: shiftRow,
+      mealForm: mealForm,
       headcount: headcount,
       othersLines: othersLines
     };

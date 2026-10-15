@@ -1,6 +1,6 @@
 # PRP — Dashboard Appartamento (`flat-dashboard`)
 
-Versione: 0.10 (Fase 5: grafica della dashboard TV)
+Versione: 0.11 (Fase 5: decisioni sulla grafica della dashboard TV)
 Riferimento: `docs/PRD.md`
 Data: 2026-09-14, aggiornato 2026-10-13
 
@@ -129,17 +129,19 @@ Link generato con `mobile-app/make-link.ps1` e condiviso solo in casa, con una p
 *Checkpoint:* un coinquilino con Android e uno con iPhone aprono il link su un telefono dove l'app non è mai stata aperta, scelgono il nome, la aggiungono alla schermata Home e la riaprono da lì.
 
 **Fase 5 — Rifinitura UI**
-Grafica della dashboard TV sul modello di due bozze di Pietro, una chiara e una scura. I file restano fuori dal repo perché contengono i nomi veri. Le bozze sono un'idea di UI da adattare alla TV:
-- data in alto; schede Pranzo e Cena con un'icona ciascuna; per ogni coinquilino il nome con un simbolo di stato (✓ presente, ✗ assente, ? non specificato) e, solo se hanno un contenuto, le righe Ospiti, Orario preferito e Note;
-- schede Turni con icona, settimana e, per ogni area, il nome assegnato con lo stato oppure "non assegnata": la TV resta a sola lettura, quindi niente menu di scelta come nelle bozze;
+Grafica della dashboard TV sul modello di due bozze di Pietro, una chiara e una scura. I file restano fuori dal repo perché contengono i nomi veri. Le bozze sono un'idea di UI da adattare alla TV; decisioni del 2026-10-13:
+- data in alto, nella forma "Sabato 10 ottobre 2026"; schede Pranzo e Cena con un'icona ciascuna; per ogni coinquilino il nome con un simbolo di stato (✓ presente, ✗ assente, ? non specificato) e l'orario preferito sulla stessa riga ("ore 19:30"), poi, solo se hanno un contenuto, le righe Ospiti e Note. L'orario sulla riga del nome è una scelta di spazio: con Ospiti, Orario preferito e Note su righe separate il caso peggiore entra solo con i dettagli a 19 px;
+- schede Turni con icona, settimana e, per ogni area, il nome assegnato con lo stato (spunta verde "fatto", cerchio vuoto "da fare") oppure "non assegnata": la TV resta a sola lettura, quindi niente menu di scelta come nelle bozze;
 - la settimana successiva segue le regole di oggi (sabato e domenica se ha assegnazioni, tasto OK);
-- tema scuro di default, tema chiaro già implementato e pronto per un selettore futuro;
-- tutto più grande di oggi (testo 26 px, data 40 px), anche quanto c'è già;
-- stile, icone SVG ed eventuale font arrivano da GitHub Pages con indirizzi assoluti, caricati da `app.js`: `index.html` installato non cambia, quindi nessun sideload. La copia di riserva nel pacchetto resta con la grafica vecchia;
-- vincoli del motore Chromium 79: niente `gap` su flexbox (arriva con Chromium 84), quindi spaziature con CSS grid o margini; il tema non segue l'impostazione chiaro/scuro del sistema.
+- tema scuro all'avvio, tema chiaro già implementato; finché non c'è un selettore, le frecce su e giù (presenti su tutti i telecomandi LG, a differenza dei tasti colorati, [doc LG](https://webostv.developer.lge.com/develop/guides/magic-remote)) cambiano tema finché l'app resta aperta, senza salvarlo. Il tema è una classe sull'elemento radice;
+- colori dalle bozze (valori sRGB del PDF): scuro sfondo `#121212`, schede `#3c3c3c`, testo `#ffffff`; chiaro sfondo `#eaeaea`, schede `#dcdcdc`, testo `#000000`; accento `#8b2a1f`, ma nel tema scuro `#e1847a`, perché quello delle bozze ha contrasto 2,2:1 sullo sfondo e 1,3:1 sulle schede; presente `#2bd500`, assente `#d50004`, non specificato `#5f5f5f`, icona Pranzo `#eeb111`, icona Cena `#5e91cc`;
+- tutto più grande di oggi (testo 26 px, data 40 px): dettagli 28 px, nomi 35, titoli delle schede 45, data 64. Solo se qualcosa non entra nelle schede, il loro contenuto scala insieme finché entra, fino a 18 px per i dettagli, con un'unica dimensione per le due schede dei pasti e una per i turni; le righe Ospiti e Note più lunghe di due righe finiscono con "…". Senza lo stile remoto le tre schede restano su tre colonne, perché `app.js` crea una sezione per la Cena accanto a quelle di `index.html`. Misurato nel browser a 1920×1080 con Inter: il caso peggiore entra con i dettagli a 23 px;
+- font Inter 5.3.0 (pacchetto npm `@fontsource/inter`, sottoinsieme latino, pesi 400, 700 e 800, circa 24 KB ciascuno, licenza SIL OFL 1.1 in `tv-app/fonts/OFL.txt`): stesse misure su PC, simulatore e TV, quindi la prova del caso peggiore nel browser vale anche per la TV;
+- `style.css` e font arrivano da GitHub Pages con indirizzi assoluti, caricati da `app.js`; le icone SVG stanno dentro `app.js`, che arriva già da Pages: nessuna richiesta in più e nessun disallineamento di versione. `index.html` installato non cambia, quindi nessun sideload; la copia di riserva nel pacchetto resta con la grafica vecchia. Senza lo stile remoto i dati restano leggibili con lo stile del guscio; una riga in basso dice se stile e font sono arrivati;
+- vincoli del motore Chromium 79 (fonte: MDN browser-compat-data): niente `gap` su flexbox (Chromium 84), quindi spaziature con margini o `grid-column-gap` (Chromium 57); variabili CSS (49), CSS grid (57), `-webkit-line-clamp` (6), woff2 (36), `document.fonts.load` (35). Il tema non segue l'impostazione chiaro/scuro del sistema. Il simulatore webOS TV 24 usa Chromium 108 ([doc LG](https://webostv.developer.lge.com/develop/specifications/web-api-and-web-engine)): la compatibilità con Chromium 79 si prova solo sulla TV.
 
 Nell'app per telefono cambia solo l'etichetta "Orario richiesto" in "Orario preferito"; il suo stile si decide dopo.
-*Checkpoint:* `node tv-app/app.test.js` passa; la dashboard si legge dal divano a colpo d'occhio; nel caso peggiore (7 coinquilini con ospiti, orario e nota a pranzo e a cena) tutto entra nello schermo; provata nel browser del PC, nel simulatore webOS TV 24 e sulla TV, in tutti e due i temi.
+*Checkpoint:* `node tv-app/app.test.js` e `node mobile-app/app.test.js` passano; la dashboard si legge dal divano a colpo d'occhio; nel caso peggiore (7 coinquilini con ospiti, orario e nota a pranzo e a cena, più la settimana successiva) tutto entra nello schermo; provata nel browser del PC, nel simulatore webOS TV 24 e sulla TV, in tutti e due i temi; senza lo stile remoto i dati restano leggibili.
 
 **Fase 6 — Rollout reale**
 Coinvolgere i coinquilini, raccogliere feedback sull'uso reale per una settimana prima di considerarlo "stabile".
@@ -167,7 +169,7 @@ Coinvolgere i coinquilini, raccogliere feedback sull'uso reale per una settimana
 
 ## 6. Criteri di accettazione MVP
 
-- L'app TV, ogni volta che la si apre, mostra presenze a pranzo e cena (con ospiti e orari richiesti) e turni pulizie della settimana corrente, senza reinstallazioni o interventi manuali per almeno 2 settimane consecutive.
+- L'app TV, ogni volta che la si apre, mostra presenze a pranzo e cena (con ospiti e orari preferiti) e turni pulizie della settimana corrente, senza reinstallazioni o interventi manuali per almeno 2 settimane consecutive.
 - Un coinquilino può segnalare la propria presenza a un pasto dall'app in meno di 10 secondi dall'apertura.
 - Una modifica dall'app compare sulla TV entro 30 secondi e nelle app degli altri coinquilini, senza bisogno di refresh manuale.
 - Il rinnovo della Developer Mode avviene senza intervento umano per almeno un ciclo completo osservato.

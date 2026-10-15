@@ -1,6 +1,6 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.9 (grafica della dashboard TV)
+Versione: 0.10 (grafica della dashboard TV: decisioni di Fase 5)
 Autore: Pietro (con supporto Claude)
 Data: 2026-09-14, aggiornato 2026-10-13
 
@@ -30,7 +30,7 @@ Tre coinquilini su sette hanno iPhone: per questo l'app per telefono è una web 
   - gli **ospiti** che invita, come lista di nomi: il numero di ospiti è quanti nomi ci sono. Gli ospiti mangiano allo stesso orario di chi li invita; eventuali eccezioni vanno nella nota. Chi è assente non può segnare ospiti.
 - Per ogni pasto può aggiungere una **nota** libera facoltativa, anche se assente (es. "rientro tardi").
 - Può impostare delle **abitudini**: per il pranzo e per la cena di ogni giorno della settimana, "di solito ci sono", "di solito non ci sono" oppure nessuna (es. pranzo: non ci sono dal lunedì al venerdì). Un'abitudine vale per i pasti a cui non ha risposto; una risposta data per quel giorno è un'eccezione e prevale. TV e app mostrano una presenza che viene da un'abitudine come una risposta normale.
-- La TV mostra, per il pranzo e la cena di oggi, chi c'è, chi no, chi non ha risposto, gli ospiti e gli orari richiesti.
+- La TV mostra, per il pranzo e la cena di oggi, chi c'è, chi no, chi non ha risposto, gli ospiti e gli orari preferiti.
 
 ### 4.2 Turni di pulizia
 - Aree di pulizia (7): sala, camera 1, camera 2, bagno 1, bagno 2, cucina, pavimenti e polveri delle mensole. I nomi si possono cambiare dalla dashboard Supabase.
@@ -45,12 +45,12 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 
 ### 4.4 Vista TV
 - La TV si usa normalmente e di notte si spegne: la dashboard è un'app che si apre quando serve, non un contenuto sempre acceso.
-- Una volta aperta: fullscreen, nessuna interazione richiesta (unica eccezione facoltativa: il tasto OK per la settimana successiva, §4.2).
+- Una volta aperta: fullscreen, nessuna interazione richiesta (eccezioni facoltative: il tasto OK per la settimana successiva, §4.2, e le frecce su e giù per il tema, sotto).
 - È un'app normale: se resta aperta a lungo senza input può comparire lo screensaver della TV. Si interviene solo se nell'uso reale dà fastidio (PRP §5).
 - Si aggiorna da sola quando qualcuno modifica qualcosa dall'app (refresh a breve intervallo, vedi PRP).
 - Resta installata tra un'accensione e l'altra senza intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
 - L'app installata sulla TV è un guscio: il codice vero si carica da una pagina pubblicata, così aggiornarla non richiede di tornare sul posto con un computer (PRP §2).
-- Grafica: schede per Pranzo, Cena e Turni, con lo stato di ognuno riconoscibile a colpo d'occhio (presente, assente, non specificato) e testi leggibili dal divano. Tema scuro, con un tema chiaro pronto per un futuro selettore.
+- Grafica: schede per Pranzo, Cena e Turni, con lo stato di ognuno riconoscibile a colpo d'occhio (presente, assente, non specificato) e testi leggibili dal divano. Testi più grandi di prima; solo nei giorni in cui il contenuto non entra nello schermo, il contenuto delle schede si rimpicciolisce quanto basta. Tema scuro all'avvio, con un tema chiaro pronto per un futuro selettore: per ora le frecce su e giù del telecomando passano da uno all'altro finché l'app resta aperta, senza salvare la scelta.
 
 ### 4.5 App per telefono
 - Web app aperta da un link, su Android e iPhone: niente store né installazione, si può aggiungere alla schermata Home. Gratuita.

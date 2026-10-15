@@ -5,13 +5,47 @@
   var POLL_MS = 20000;
   var REQUEST_TIMEOUT_MS = 15000;
   var OK_KEY = 13;
+  var UP_KEY = 38;
+  var DOWN_KEY = 40;
+  var LIGHT_THEME = 'theme-light';
+  var MIN_FONT_PX = 18;
   var MEALS = [['lunch', 'Pranzo'], ['dinner', 'Cena']];
   var WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
+  var MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre',
+    'novembre', 'dicembre'];
   var SCREENSAVER_URI = 'luna://com.webos.service.tvpower/power/';
   // Unique per launch: the TV keeps a closed app's registration until it restarts, and re-registering the same name fails with errorCode -3.
   var SCREENSAVER_CLIENT = 'com.apparentati.dashboard.' + Date.now();
   // Absolute: the page runs from the installed package, which has no style.css.
   var ASSET_BASE = 'https://pepuz.github.io/dashboard_apparentati/tv-app/';
+
+  // Inline so the icons arrive from Pages with this file; width and height match the shell's text if style.css does not load.
+  function svg(cls, label, body) {
+    return '<svg class="' + cls + '" viewBox="0 0 24 24" width="26" height="26"' +
+      (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + '>' + body + '</svg>';
+  }
+
+  var CHECK = '<circle cx="12" cy="12" r="11" fill="#2bd500"/><path d="M6.8 12.4l3.4 3.4 7-7" fill="none" stroke="#fff" ' +
+    'stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>';
+  var STATE_ICONS = {
+    present: svg('state', 'presente', CHECK),
+    absent: svg('state', 'assente', '<circle cx="12" cy="12" r="11" fill="#d50004"/><path d="M8 8l8 8M16 8l-8 8" fill="none" ' +
+      'stroke="#fff" stroke-width="2.8" stroke-linecap="round"/>'),
+    unknown: svg('state', 'non specificato', '<circle cx="12" cy="12" r="11" fill="#5f5f5f"/><path d="M9 9.4a3 3 0 1 1 4.4 2.6' +
+      'c-.9.5-1.4 1-1.4 2.2" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/>' +
+      '<circle cx="12" cy="17.8" r="1.5" fill="#fff"/>'),
+    done: svg('state', 'fatto', CHECK),
+    pending: svg('state', 'da fare', '<circle cx="12" cy="12" r="9.6" fill="none" stroke="#5f5f5f" stroke-width="2.8"/>')
+  };
+  var CARD_ICONS = {
+    lunch: svg('icon', '', '<path fill="#eeb111" fill-rule="evenodd" d="M12 1a11 11 0 1 0 0 22a11 11 0 1 0 0-22z' +
+      'M6.6 5h1v4.4h-1zM8.3 5h1v4.4h-1zM10 5h1v4.4h-1zM6.6 9.4h4.4v1.6h-4.4zM8.05 11h1.5v8h-1.5z' +
+      'M15 5c2.4 1 2.6 4.6 2.1 7.2h-2.1zM15 12.2h1.7v6.8h-1.7z"/>'),
+    dinner: svg('icon', '', '<g fill="#5e91cc"><circle cx="12" cy="6" r="1.6"/><path d="M3 17a9 9 0 0 1 18 0z"/>' +
+      '<rect x="1" y="18" width="22" height="2.2" rx="1.1"/></g>'),
+    shifts: svg('icon accent', '', '<path d="M6 10a6 6 0 0 1 12 0" fill="none" stroke="currentColor" stroke-width="2"/>' +
+      '<path fill="currentColor" d="M3 10h18l-1 2.2H4zM5 13.2h14l-1.6 8.3H6.6z"/>')
+  };
 
   var screensaverBridges = [];
 
@@ -40,22 +74,15 @@
   }
 
   function longDate(d) {
-    return WEEKDAYS[d.getDay()] + ' ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear();
+    var weekday = WEEKDAYS[d.getDay()];
+    return weekday.charAt(0).toUpperCase() + weekday.slice(1) + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' +
+      d.getFullYear();
   }
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
     });
-  }
-
-  function describeMeal(p) {
-    if (!p) return 'non specificato';
-    var parts = [p.is_present ? 'presente' : 'assente'];
-    if (p.required_time) parts.push('ore ' + p.required_time.slice(0, 5));
-    if (p.guest_names.length) parts.push('ospiti (' + p.guest_names.length + '): ' + p.guest_names.join(', '));
-    if (p.note) parts.push('nota: ' + p.note);
-    return parts.join(' · ');
   }
 
   // The day's answer wins over the weekly habit; meal_defaults is already filtered to today's weekday.
@@ -66,14 +93,35 @@
     return habit ? { is_present: habit.is_present, required_time: null, guest_names: [], note: null } : undefined;
   }
 
-  function describeShift(s) {
-    if (!s) return 'non assegnata';
-    return s.roommates.name + ' (' + (s.status === 'done' ? 'fatto' : 'da fare') + ')';
+  // The preferred time sits on the name line: with a line of its own the worst case only fits with 19 px details.
+  function personHtml(name, p) {
+    var state = !p ? 'unknown' : p.is_present ? 'present' : 'absent';
+    var html = '<div class="who">' + escapeHtml(name) + ' ' + STATE_ICONS[state] +
+      (p && p.required_time ? ' <span class="time">ore ' + p.required_time.slice(0, 5) + '</span>' : '') + '</div>';
+    if (p && p.guest_names.length) html += '<div class="detail">Ospiti: ' + escapeHtml(p.guest_names.join(', ')) + '</div>';
+    if (p && p.note) html += '<div class="detail">Note: ' + escapeHtml(p.note) + '</div>';
+    return '<li>' + html + '</li>';
+  }
+
+  function mealCard(meal, roommates) {
+    return '<div class="card meal"><h2>' + meal[1] + ' ' + CARD_ICONS[meal[0]] + '</h2><ul>' +
+      roommates.map(function (r) { return personHtml(r.name, presenceFor(r, meal[0])); }).join('') + '</ul></div>';
+  }
+
+  function shiftHtml(area, s) {
+    return '<li><span class="area">' + escapeHtml(area) + '</span> ' + (s
+      ? '<span class="who">' + escapeHtml(s.roommates.name) + ' ' + STATE_ICONS[s.status === 'done' ? 'done' : 'pending'] + '</span>'
+      : '<span class="who none">non assegnata</span>') + '</li>';
   }
 
   function shiftFor(task, week) {
     var matches = task.cleaning_shifts.filter(function (s) { return s.week_start === week; });
     return matches.length ? matches[0] : null;
+  }
+
+  function weekCard(tasks, week) {
+    return '<div class="card week"><h2>Turni ' + CARD_ICONS.shifts + ' <span class="week-start">settimana ' + dayMonth(week) +
+      '</span></h2><ul>' + tasks.map(function (t) { return shiftHtml(t.name, shiftFor(t, week)); }).join('') + '</ul></div>';
   }
 
   // forced is the OK-key choice for today (true/false), or null to apply the weekend rule.
@@ -114,20 +162,26 @@
     });
   }
 
-  function renderMeals(data) {
-    return MEALS.map(function (meal) {
-      var items = data.roommates.map(function (r) {
-        return '<li>' + escapeHtml(r.name + ': ' + describeMeal(presenceFor(r, meal[0]))) + '</li>';
-      });
-      return '<h2>' + meal[1] + '</h2><ul>' + items.join('') + '</ul>';
-    }).join('');
+  function overflowing(cards) {
+    for (var i = 0; i < cards.length; i++) {
+      if (cards[i].scrollHeight > cards[i].clientHeight) return true;
+    }
+    return false;
   }
 
-  function renderWeek(title, tasks, week) {
-    var items = tasks.map(function (t) {
-      return '<li>' + escapeHtml(t.name + ': ' + describeShift(shiftFor(t, week))) + '</li>';
-    });
-    return '<h2>' + title + '</h2><ul>' + items.join('') + '</ul>';
+  function setFontSize(cards, value) {
+    for (var i = 0; i < cards.length; i++) cards[i].style.fontSize = value;
+  }
+
+  // A normal day keeps the size from style.css; if any card of the group overflows, the whole group shrinks a pixel at a
+  // time, down to MIN_FONT_PX. Without style.css the cards have no fixed height, so nothing overflows and nothing shrinks.
+  function fit(cards) {
+    setFontSize(cards, '');
+    var size = parseFloat(cards[0].ownerDocument.defaultView.getComputedStyle(cards[0]).fontSize);
+    while (size > MIN_FONT_PX && overflowing(cards)) {
+      size--;
+      setFontSize(cards, size + 'px');
+    }
   }
 
   function keepScreenOn(setStatus) {
@@ -161,23 +215,32 @@
   }
 
   // Loaded here so the installed index.html needs no new sideload; without it the shell's inline style keeps the data readable.
-  function loadStyle(doc, setStatus) {
+  // onApplied runs once style and fonts are in, because both change how much text fits in a card.
+  function loadStyle(doc, setStatus, onApplied) {
     var link = doc.createElement('link');
     link.rel = 'stylesheet';
     link.href = ASSET_BASE + 'style.css?t=' + Date.now();
     link.onload = function () {
-      // Rejects if the font cannot be fetched from Pages; resolves empty if the style declares no Inter face.
-      doc.fonts.load('1em Inter').then(function (faces) {
-        setStatus('Stile: remoto, font ' + (faces.length ? 'Inter' : 'di sistema'), false);
-      }, function () {
-        setStatus('Stile: remoto, font Inter non caricato', true);
-      });
+      // Each load rejects if its font cannot be fetched from Pages, and resolves empty if the style declares no such face.
+      Promise.all(['1em Inter', '700 1em Inter', '800 1em Inter'].map(function (font) { return doc.fonts.load(font); }))
+        .then(function (results) {
+          var all = results.every(function (faces) { return faces.length > 0; });
+          setStatus('Stile: remoto, font ' + (all ? 'Inter' : 'di sistema'), false);
+        }, function () {
+          setStatus('Stile: remoto, font Inter non caricato', true);
+        })
+        .then(onApplied);
     };
     link.onerror = function () { setStatus('Stile: non caricato', true); };
     doc.head.appendChild(link);
   }
 
   function start(doc) {
+    var shifts = doc.getElementById('shifts');
+    // One section per column, so that without style.css the shell's inline flex layout still shows three columns.
+    var dinner = doc.createElement('section');
+    shifts.parentNode.insertBefore(dinner, shifts);
+    var mealSections = [doc.getElementById('meals'), dinner];
     var last = null;
     var lastUpdate = '';
     var toggle = null;
@@ -192,14 +255,19 @@
       return toggle && toggle.date === isoDate(last.today) ? toggle.show : null;
     }
 
+    function fitAll() {
+      fit(doc.querySelectorAll('.meal'));
+      fit(doc.querySelectorAll('.week'));
+    }
+
     function render() {
       doc.getElementById('today').textContent = longDate(last.today);
-      doc.getElementById('meals').innerHTML = renderMeals(last);
-      doc.getElementById('shifts').innerHTML =
-        renderWeek('Turni settimana dal ' + dayMonth(last.thisWeek), last.tasks, last.thisWeek) +
-        (nextWeekVisible(last, forcedNextWeek())
-          ? renderWeek('Settimana successiva, dal ' + dayMonth(last.nextWeek), last.tasks, last.nextWeek)
-          : '');
+      MEALS.forEach(function (meal, i) {
+        mealSections[i].innerHTML = mealCard(meal, last.roommates);
+      });
+      shifts.innerHTML = weekCard(last.tasks, last.thisWeek) +
+        (nextWeekVisible(last, forcedNextWeek()) ? weekCard(last.tasks, last.nextWeek) : '');
+      fitAll();
     }
 
     function poll() {
@@ -222,7 +290,9 @@
     var styleStatus = doc.createElement('div');
     styleStatus.id = 'style';
     doc.querySelector('footer').appendChild(styleStatus);
-    loadStyle(doc, function (text, isError) { setStatus('style', text, isError); });
+    loadStyle(doc, function (text, isError) { setStatus('style', text, isError); }, function () {
+      if (last) fitAll();
+    });
 
     keepScreenOn(function (text) { setStatus('screensaver', text, false); });
 
@@ -231,10 +301,14 @@
       return;
     }
 
+    // Up and down switch theme until the app closes: every LG remote has arrows, only some have color keys.
     doc.addEventListener('keydown', function (e) {
-      if (e.keyCode !== OK_KEY || !last) return;
-      toggle = { date: isoDate(last.today), show: !nextWeekVisible(last, forcedNextWeek()) };
-      render();
+      if (e.keyCode === UP_KEY || e.keyCode === DOWN_KEY) {
+        doc.documentElement.classList.toggle(LIGHT_THEME);
+      } else if (e.keyCode === OK_KEY && last) {
+        toggle = { date: isoDate(last.today), show: !nextWeekVisible(last, forcedNextWeek()) };
+        render();
+      }
     });
 
     poll();
@@ -245,10 +319,13 @@
       isoDate: isoDate,
       addDays: addDays,
       weekStart: weekStart,
+      longDate: longDate,
       escapeHtml: escapeHtml,
-      describeMeal: describeMeal,
       presenceFor: presenceFor,
-      describeShift: describeShift,
+      personHtml: personHtml,
+      mealCard: mealCard,
+      shiftHtml: shiftHtml,
+      weekCard: weekCard,
       nextWeekVisible: nextWeekVisible
     };
   } else {
