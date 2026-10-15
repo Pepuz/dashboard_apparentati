@@ -26,22 +26,23 @@
 
 html, body { height: 100%; }
 
+/* Geometry and type scale measured on the drafts at 1920x1080. Card text is in em of the detail size, which app.js fits. */
 body {
   box-sizing: border-box;
   margin: 0;
-  padding: 36px 64px 64px;
+  padding: 51px 85px 45px;
   display: flex;
   flex-direction: column;
   background: var(--bg);
   color: var(--text);
-  font: 28px/1.25 Inter, sans-serif;
+  font: 15px/1.47 Inter, sans-serif;
 }
 
 /* The webOS 24 simulator injects `* { font-family: "LG Display-Regular"; font-weight: 400 !important; }` into the app:
    `body *` outranks `*` for the family, and every weight other than 400 below needs !important. */
 body * { font-family: Inter, sans-serif; }
 
-#today { margin: 0 0 28px; font-size: 64px; line-height: 1; font-weight: 800 !important; color: var(--accent); }
+#today { margin: 0 0 33px; font-size: 62px; line-height: 1; font-weight: 800 !important; color: var(--accent); }
 
 main {
   flex: 1;
@@ -49,30 +50,30 @@ main {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
   grid-template-rows: minmax(0, 1fr);
-  grid-column-gap: 48px;
+  grid-column-gap: 56px;
 }
 
 main > section { min-height: 0; padding: 0; display: flex; flex-direction: column; }
 
-.card { flex: 1; min-height: 0; overflow: hidden; padding: 28px 36px; border-radius: 40px; background: var(--card); }
-.card + .card { margin-top: 28px; }
-.card h2 { margin: 0 0 0.3em; font-size: 1.6em; line-height: 1.1; font-weight: 700 !important; }
+.card { flex: 1; min-height: 0; overflow: hidden; padding: 54px 47px 45px; border-radius: 40px; background: var(--card); }
+.card + .card { margin-top: 8px; }
+.card h2 { margin: 0 0 10px; font-size: 41px; line-height: 1.1; font-weight: 700 !important; }
 .card ul { margin: 0; padding: 0; list-style: none; }
-.card li { margin-top: 0.45em; }
+.card li { margin-top: 0.53em; }
 
-.icon, .state { width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
+.icon, .state { width: 1.15em; height: 1.15em; vertical-align: -0.2em; }
 .accent, .week-start { color: var(--accent); }
-.week-start { display: inline-block; font-size: 0.62em; font-weight: 700 !important; white-space: nowrap; }
+.week-start { display: inline-block; font-size: 28px; font-weight: 700 !important; white-space: nowrap; }
 
-.who { font-size: 1.25em; font-weight: 700 !important; }
+.who { font-size: 1.627em; line-height: 1.15; font-weight: 700 !important; }
 .time { font-weight: 400; }
 .detail { overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; color: var(--soft); }
 
-.week li { display: flex; align-items: baseline; font-size: 1.1em; }
+.week li { display: flex; align-items: baseline; font-size: 1.373em; line-height: 1.2; margin-top: 0.5em; }
 .week .area { flex: 1; }
 .week .who { margin-left: 0.6em; font-size: 1em; white-space: nowrap; }
 .week .none { font-weight: 400 !important; font-style: italic; color: var(--soft); }
 
-footer { left: 64px; right: 64px; bottom: 18px; display: flex; font: 18px/1.2 Inter, sans-serif; color: var(--soft); white-space: nowrap; }
+footer { left: 85px; right: 85px; bottom: 12px; display: flex; font: 16px/1.2 Inter, sans-serif; color: var(--soft); white-space: nowrap; }
 footer div { overflow: hidden; text-overflow: ellipsis; margin-right: 32px; }
 .error { color: var(--error); }

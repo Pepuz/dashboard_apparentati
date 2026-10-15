@@ -1,6 +1,6 @@
 # PRD — Dashboard Appartamento (nome provvisorio: `flat-dashboard`)
 
-Versione: 0.10 (grafica della dashboard TV: decisioni di Fase 5)
+Versione: 0.11 (grafica della dashboard TV: proporzioni delle bozze)
 Autore: Pietro (con supporto Claude)
 Data: 2026-09-14, aggiornato 2026-10-13
 
@@ -50,7 +50,7 @@ Il messaggio iniziale menzionava "e altro" senza specificare cosa. Per l'MVP que
 - Si aggiorna da sola quando qualcuno modifica qualcosa dall'app (refresh a breve intervallo, vedi PRP).
 - Resta installata tra un'accensione e l'altra senza intervento manuale ricorrente (a parte la manutenzione periodica della Developer Mode, gestita da automazione — vedi PRP §5).
 - L'app installata sulla TV è un guscio: il codice vero si carica da una pagina pubblicata, così aggiornarla non richiede di tornare sul posto con un computer (PRP §2).
-- Grafica: schede per Pranzo, Cena e Turni, con lo stato di ognuno riconoscibile a colpo d'occhio (presente, assente, non specificato) e testi leggibili dal divano. Testi più grandi di prima: le schede usano il testo più grande che ci sta, quindi più è vuoto il giorno, più è grande; nei giorni pieni si rimpicciolisce quanto basta. Tema scuro all'avvio, con un tema chiaro pronto per un futuro selettore: per ora le frecce su e giù del telecomando passano da uno all'altro finché l'app resta aperta, senza salvare la scelta.
+- Grafica: schede per Pranzo, Cena e Turni, con lo stato di ognuno riconoscibile a colpo d'occhio (presente, assente, non specificato) e testi leggibili dal divano. Proporzioni delle bozze di Pietro: data, titoli e nomi più grandi di prima, dettagli (ospiti, note) più piccoli; le liste usano il testo più grande che ci sta senza superare i titoli, e nei giorni pieni si rimpiccioliscono quanto basta. Tema scuro all'avvio, con un tema chiaro pronto per un futuro selettore: per ora le frecce su e giù del telecomando passano da uno all'altro finché l'app resta aperta, senza salvare la scelta.
 
 ### 4.5 App per telefono
 - Web app aperta da un link, su Android e iPhone: niente store né installazione, si può aggiungere alla schermata Home. Gratuita.

@@ -8,8 +8,8 @@
   var UP_KEY = 38;
   var DOWN_KEY = 40;
   var LIGHT_THEME = 'theme-light';
-  var MIN_FONT_PX = 18;
-  var MAX_FONT_PX = 36;
+  var MIN_FONT_PX = 12;
+  var MAX_FONT_PX = 21;
   var MEALS = [['lunch', 'Pranzo'], ['dinner', 'Cena']];
   var WEEKDAYS = ['domenica', 'lunedì', 'martedì', 'mercoledì', 'giovedì', 'venerdì', 'sabato'];
   var MONTHS = ['gennaio', 'febbraio', 'marzo', 'aprile', 'maggio', 'giugno', 'luglio', 'agosto', 'settembre', 'ottobre',
@@ -94,7 +94,7 @@
     return habit ? { is_present: habit.is_present, required_time: null, guest_names: [], note: null } : undefined;
   }
 
-  // The preferred time sits on the name line: with a line of its own the worst case only fits with 19 px details.
+  // The preferred time sits on the name line, saving a row per roommate on full days.
   function personHtml(name, p) {
     var state = !p ? 'unknown' : p.is_present ? 'present' : 'absent';
     var html = '<div class="who">' + escapeHtml(name) + ' ' + STATE_ICONS[state] +
