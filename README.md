@@ -492,20 +492,21 @@ La copia di riserva di `app.js` inclusa nel pacchetto della TV non conosce le ab
 
 ## Fase 5 — passi manuali
 
-La dashboard TV prende la grafica delle bozze (PRP, Fase 5): schede Pranzo, Cena e Turni con icone, simbolo di stato per ogni coinquilino e per ogni area, tema scuro all'avvio e tema chiaro con le frecce su e giù del telecomando, senza salvare la scelta. Nell'app per telefono l'orario del pasto si chiama "Orario preferito"; la colonna in Supabase resta `required_time`.
+La dashboard TV prende la grafica delle bozze (PRP, Fase 5): schede Pranzo, Cena e Turni con icone, simbolo di stato per ogni coinquilino (prima del nome, in colonna) e per ogni area, il totale dei presenti accanto a Pranzo e Cena, chi non ha risposto in grigio, tema scuro all'avvio e tema chiaro con le frecce su e giù del telecomando, senza salvare la scelta. Nell'app per telefono l'orario del pasto si chiama "Orario preferito"; la colonna in Supabase resta `required_time`.
 
 Tutto arriva da GitHub Pages, quindi niente sideload: `tv-app/app.js` (codice e icone), `tv-app/style.css` e il font Inter in `tv-app/fonts/` (licenza SIL Open Font License 1.1, in `tv-app/fonts/OFL.txt`). `index.html` installato non cambia. La copia di riserva di `app.js` nel pacchetto resta con la grafica vecchia.
 
-Margini, schede e dimensioni seguono le proporzioni delle bozze (PRP, Fase 5): data e titoli fissi, mentre il testo delle liste prende la dimensione più grande che entra, con i dettagli tra 12 e 21 px e i nomi fino a 34 px; una dimensione per le due schede dei pasti, una per i turni. Il caso peggiore (7 coinquilini con ospiti, orario e nota, più la settimana successiva) ha i dettagli a 19 px. Le righe Ospiti e Note più lunghe di due righe finiscono con "…".
+Margini, schede e dimensioni seguono le proporzioni delle bozze (PRP, Fase 5): data e titoli fissi, mentre il testo delle liste prende la dimensione più grande che entra, con i dettagli tra 12 e 21 px e i nomi fino a 34 px; una dimensione per le due schede dei pasti, una per i turni. Il caso peggiore (7 coinquilini con ospiti, orario e nota, più la settimana successiva) ha i dettagli a 19 px. Ogni coinquilino e ogni area occupano sempre la stessa parte della scheda, separata da una linea sottile e con il contenuto centrato: senza dettagli il nome resta al suo posto. Le righe Ospiti e Note più lunghe di due righe finiscono con "…".
 
-In basso, oltre alle righe della Fase 1:
+In basso, quando va tutto bene, resta solo `Aggiornato alle HH:MM:SS`. Le altre righe compaiono così:
 
-| Riga | Significato |
+| Cosa vedi in basso | Significato |
 | --- | --- |
-| `Stile: remoto, font Inter` | grafica nuova completa |
-| `Stile: remoto, font Inter non caricato` o `font di sistema` | grafica nuova con il font della TV: misure diverse, ma l'adattamento tiene tutto nello schermo |
-| `Stile: non caricato` | `style.css` non raggiungibile: dati leggibili con lo stile del guscio, su tre colonne. Chiudi e riapri l'app |
-| nessuna riga `Stile:` | è in uso la copia di riserva (`Codice: copia locale`), con la grafica vecchia |
+| solo `Aggiornato alle …` | grafica nuova completa, con il font Inter |
+| `Stile: remoto, font …` in rosso, con un nome diverso da Inter (o `font Inter non caricato`) | grafica nuova con un altro font: misure diverse, ma l'adattamento tiene tutto nello schermo |
+| `Errore alle …` in rosso | Supabase non risponde: restano i dati dell'ultimo aggiornamento |
+| tutte le righe della Fase 1 e `Stile: non caricato` | `style.css` non raggiungibile: dati leggibili con lo stile del guscio, su tre colonne. Chiudi e riapri l'app |
+| tutte le righe della Fase 1, senza `Stile:` | è in uso la copia di riserva (`Codice: copia locale`), con la grafica vecchia |
 
 Controllo della logica, senza rete:
 
@@ -525,7 +526,7 @@ node mobile-app/app.test.js
 ### B. Browser del PC
 
 1. Serve `tv-app/config.js` (Fase 1, sezione A, punto 1). Apri `tv-app/index.html` con doppio clic, in Chrome o Edge.
-2. Devi vedere la data nella forma `Martedì 13 ottobre 2026`, tre schede (Pranzo, Cena, Turni) e in basso `Codice: remoto` e `Stile: remoto, font Inter`. Una finestra più piccola dello schermo della TV rimpicciolisce le schede: per vederle come sulla TV, schermo intero con F11 su un monitor 1920×1080.
+2. Devi vedere la data nella forma `Martedì 13 ottobre 2026`, tre schede (Pranzo, Cena, Turni) e in basso solo `Aggiornato alle …`. Una finestra più piccola dello schermo della TV rimpicciolisce le schede: per vederle come sulla TV, schermo intero con F11 su un monitor 1920×1080.
 3. Premi freccia su o freccia giù: tema chiaro. Ripremi: tema scuro.
 4. Premi Invio: la settimana successiva compare o sparisce, come con OK sulla TV.
 
@@ -542,7 +543,7 @@ Ripeti i controlli della sezione B con i tasti del telecomando virtuale del simu
 ### D. Sulla TV
 
 1. Se Dashboard casa è aperta, premi **Indietro** e conferma l'uscita dall'app; poi **Home** → **Dashboard casa**. Il codice si carica solo all'avvio.
-2. In basso: `Codice: remoto` e `Stile: remoto, font Inter`.
+2. In basso solo `Aggiornato alle …`: vuol dire codice e stile da Pages e font Inter. Una riga `Stile:` in rosso vuol dire che la TV impone un altro font: annotane il testo esatto.
 3. Dal divano, a colpo d'occhio: la data; chi c'è (spunta verde), chi no (croce rossa), chi non ha risposto (punto di domanda grigio), con orario, ospiti e note; i turni (spunta verde fatto, cerchio vuoto da fare, "non assegnata").
 4. Freccia su o giù: tema chiaro. Ripeti il punto 3, poi riprova la freccia: torna lo scuro. Alla riapertura l'app parte sempre scura.
 5. OK: la settimana successiva compare o sparisce.

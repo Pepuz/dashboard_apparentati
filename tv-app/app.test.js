@@ -38,6 +38,18 @@ var unknown = app.personHtml('<Nome 3>', undefined);
 assert.strictEqual(state(unknown), 'non specificato');
 assert.ok(has(unknown, '&lt;Nome 3&gt;'));
 assert.ok(!has(unknown, 'class="detail"'));
+// The row's class lets style.css mute the roommates who have not answered.
+assert.ok(has(unknown, '<li class="unknown">') && has(absent, '<li class="absent">') && has(full, '<li class="present">'));
+// The state icon comes before the name, so the states line up in a column.
+assert.ok(full.indexOf('aria-label="presente"') < full.indexOf('Nome 1'));
+
+var withGuests = { is_present: true, required_time: null, guest_names: ['Ospite 1', 'Ospite 2'], note: null };
+var alone = { is_present: true, required_time: null, guest_names: [], note: null };
+var away = { is_present: false, required_time: null, guest_names: [], note: 'rientro tardi' };
+assert.strictEqual(app.headcount([undefined, away]), 'nessun presente');
+assert.strictEqual(app.headcount([alone, undefined]), '1 presente');
+assert.strictEqual(app.headcount([withGuests, alone, away]), '2 presenti + 2 ospiti');
+assert.strictEqual(app.headcount([{ is_present: true, required_time: null, guest_names: ['Ospite 1'], note: null }]), '1 presente + 1 ospite');
 
 var habitual = {
   name: 'Nome 4',
@@ -60,7 +72,8 @@ assert.strictEqual(state(app.personHtml('Nome 6', app.presenceFor(excepted, 'lun
 
 var lunch = app.mealCard(['lunch', 'Pranzo'], [answered, habitual]);
 assert.ok(has(lunch, '<h2>Pranzo '));
-assert.strictEqual(lunch.split('<li>').length - 1, 2);
+assert.ok(has(lunch, '<span class="count">1 presente</span>'));
+assert.strictEqual(lunch.split('<li ').length - 1, 2);
 assert.ok(lunch.indexOf('Nome 5') < lunch.indexOf('Nome 4'));
 
 assert.strictEqual(state(app.shiftHtml('Sala', { status: 'done', roommates: { name: 'Nome 1' } })), 'fatto');

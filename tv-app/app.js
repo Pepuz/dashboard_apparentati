@@ -94,19 +94,31 @@
     return habit ? { is_present: habit.is_present, required_time: null, guest_names: [], note: null } : undefined;
   }
 
-  // The preferred time sits on the name line, saving a row per roommate on full days.
+  // The state icon comes first so the states line up in a column; the preferred time sits on the name line, saving a
+  // row per roommate on full days.
   function personHtml(name, p) {
     var state = !p ? 'unknown' : p.is_present ? 'present' : 'absent';
-    var html = '<div class="who">' + escapeHtml(name) + ' ' + STATE_ICONS[state] +
+    var html = '<div class="who">' + STATE_ICONS[state] + ' ' + escapeHtml(name) +
       (p && p.required_time ? ' <span class="time">ore ' + p.required_time.slice(0, 5) + '</span>' : '') + '</div>';
     if (p && p.guest_names.length) html += '<div class="detail">Ospiti: ' + escapeHtml(p.guest_names.join(', ')) + '</div>';
     if (p && p.note) html += '<div class="detail">Note: ' + escapeHtml(p.note) + '</div>';
-    return '<li>' + html + '</li>';
+    return '<li class="' + state + '">' + html + '</li>';
+  }
+
+  // Same wording as headcount in mobile-app/app.js.
+  function headcount(presences) {
+    var present = presences.filter(function (p) { return p && p.is_present; });
+    var guests = present.reduce(function (n, p) { return n + p.guest_names.length; }, 0);
+    if (!present.length) return 'nessun presente';
+    return present.length + (present.length === 1 ? ' presente' : ' presenti') +
+      (guests ? ' + ' + guests + (guests === 1 ? ' ospite' : ' ospiti') : '');
   }
 
   function mealCard(meal, roommates) {
-    return '<div class="card meal"><h2>' + meal[1] + ' ' + CARD_ICONS[meal[0]] + '</h2><ul>' +
-      roommates.map(function (r) { return personHtml(r.name, presenceFor(r, meal[0])); }).join('') + '</ul></div>';
+    var presences = roommates.map(function (r) { return presenceFor(r, meal[0]); });
+    return '<div class="card meal"><h2>' + meal[1] + ' ' + CARD_ICONS[meal[0]] + ' <span class="count">' +
+      headcount(presences) + '</span></h2><ul>' +
+      roommates.map(function (r, i) { return personHtml(r.name, presences[i]); }).join('') + '</ul></div>';
   }
 
   function shiftHtml(area, s) {
@@ -163,9 +175,18 @@
     });
   }
 
+  function overflows(el) {
+    return el.scrollHeight > el.clientHeight || el.scrollWidth > el.clientWidth;
+  }
+
+  // Each row has a fixed slot in its card (style.css), so a row can overflow its slot while the card itself does not.
   function overflowing(cards) {
     for (var i = 0; i < cards.length; i++) {
-      if (cards[i].scrollHeight > cards[i].clientHeight || cards[i].scrollWidth > cards[i].clientWidth) return true;
+      if (overflows(cards[i])) return true;
+      var rows = cards[i].querySelectorAll('li');
+      for (var j = 0; j < rows.length; j++) {
+        if (overflows(rows[j])) return true;
+      }
     }
     return false;
   }
@@ -228,7 +249,7 @@
           var all = results.every(function (faces) { return faces.length > 0; });
           // webOS can inject a stylesheet with its own font (the webOS 24 simulator does, see style.css): report the font in use.
           var used = doc.defaultView.getComputedStyle(doc.getElementById('today')).fontFamily.split(',')[0].replace(/["']/g, '');
-          setStatus('Stile: remoto, font ' + (all ? used : 'di sistema'), false);
+          setStatus('Stile: remoto, font ' + (all ? used : 'di sistema'), !all || used !== 'Inter');
         }, function () {
           setStatus('Stile: remoto, font Inter non caricato', true);
         })
@@ -329,6 +350,7 @@
       escapeHtml: escapeHtml,
       presenceFor: presenceFor,
       personHtml: personHtml,
+      headcount: headcount,
       mealCard: mealCard,
       shiftHtml: shiftHtml,
       weekCard: weekCard,
