@@ -98,3 +98,16 @@ footer div { overflow: hidden; text-overflow: ellipsis; margin-right: 32px; }
    without style.css the shell shows every line. */
 footer #screensaver, footer #source, footer #style:not(.error) { display: none; }
 .error { color: var(--error); }
+
+/* One meals card two columns wide (mealsTable in app.js), names once and a column per meal. */
+#meals { grid-column: span 2; }
+main > section:empty { display: none; }
+.both .head, .both li { display: grid; grid-template-columns: 24% 38% 38%; }
+.both .head { flex: none; margin-bottom: 10px; }
+.both .head h2 { margin: 0; }
+.both .count { display: block; margin-top: 4px; }
+.both li { align-items: center; align-content: center; }
+.both .name { font-size: 1.627em; line-height: 1.15; font-weight: 700 !important; }
+.both .cell .who { font-size: 1.627em; line-height: 1.15; }
+.both .cell .detail { padding-left: 0; }
+.both .cell.unknown .who { font-weight: 400 !important; }

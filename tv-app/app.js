@@ -121,6 +121,27 @@
       roommates.map(function (r, i) { return personHtml(r.name, presences[i]); }).join('') + '</ul></div>';
   }
 
+  function cellHtml(p) {
+    var state = !p ? 'unknown' : p.is_present ? 'present' : 'absent';
+    var html = '<div class="who">' + STATE_ICONS[state] +
+      (p && p.required_time ? ' <span class="time">ore ' + p.required_time.slice(0, 5) + '</span>' : '') + '</div>';
+    if (p && p.guest_names.length) html += '<div class="detail">Ospiti: ' + escapeHtml(p.guest_names.join(', ')) + '</div>';
+    if (p && p.note) html += '<div class="detail">Note: ' + escapeHtml(p.note) + '</div>';
+    return '<div class="cell ' + state + '">' + html + '</div>';
+  }
+
+  // One meals card two columns wide: each name once, then a cell for lunch and one for dinner.
+  function mealsTable(roommates) {
+    var lunch = roommates.map(function (r) { return presenceFor(r, 'lunch'); });
+    var dinner = roommates.map(function (r) { return presenceFor(r, 'dinner'); });
+    return '<div class="card meal both"><div class="head"><span></span>' +
+      '<h2>Pranzo ' + CARD_ICONS.lunch + '<span class="count">' + headcount(lunch) + '</span></h2>' +
+      '<h2>Cena ' + CARD_ICONS.dinner + '<span class="count">' + headcount(dinner) + '</span></h2></div><ul>' +
+      roommates.map(function (r, i) {
+        return '<li><div class="name">' + escapeHtml(r.name) + '</div>' + cellHtml(lunch[i]) + cellHtml(dinner[i]) + '</li>';
+      }).join('') + '</ul></div>';
+  }
+
   function shiftHtml(area, s) {
     return '<li><span class="area">' + escapeHtml(area) + '</span> ' + (s
       ? '<span class="who">' + escapeHtml(s.roommates.name) + ' ' + STATE_ICONS[s.status === 'done' ? 'done' : 'pending'] + '</span>'
@@ -288,9 +309,8 @@
 
     function render() {
       doc.getElementById('today').textContent = longDate(last.today);
-      MEALS.forEach(function (meal, i) {
-        mealSections[i].innerHTML = mealCard(meal, last.roommates);
-      });
+      mealSections[0].innerHTML = mealsTable(last.roommates);
+      mealSections[1].innerHTML = '';
       shifts.innerHTML = weekCard(last.tasks, last.thisWeek) +
         (nextWeekVisible(last, forcedNextWeek()) ? weekCard(last.tasks, last.nextWeek) : '');
       fitAll();
@@ -352,6 +372,7 @@
       personHtml: personHtml,
       headcount: headcount,
       mealCard: mealCard,
+      mealsTable: mealsTable,
       shiftHtml: shiftHtml,
       weekCard: weekCard,
       nextWeekVisible: nextWeekVisible
